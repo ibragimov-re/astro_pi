@@ -1,0 +1,1 @@
+scp `ls | grep '.py'`  root@192.168.88.253:/home/astropi

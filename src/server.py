@@ -1,0 +1,136 @@
+import socket
+import threading
+import logging
+from abc import ABC, abstractmethod
+from utils.tracking_mode import TrackingMode
+from location import Location
+
+
+class Server(ABC):
+    name = 'AstroPi Server'
+    buffer = 1024
+    host = '0.0.0.0'
+    port = 10001
+    location = None
+
+    latitude_deg = 0  # A - градусы широты
+    latitude_min = 0  # B - минуты широты
+    latitude_sec = 0  # C - секунды широты
+    north_south = 0  # D - 0=N, 1=S
+
+    longitude_deg = 0  # E - градусы долготы
+    longitude_min = 0  # F - минуты долготы
+    longitude_sec = 0  # G - секунды долготы
+    east_west = 0  # H - 0=E, 1=W
+    goto_in_progress = False
+    alignment_in_progress = False
+    tracking_mode = TrackingMode.EQ_NORTH
+
+    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi Server'):
+        self.host = host
+        self.port = port
+        self.name = name
+        self.running = False
+        self.server_socket = None
+        self.logger = self._setup_logger()
+        self._setup_server_socket()
+        self.location = Location()
+    def _setup_logger(self):
+        logger = logging.getLogger(self.name)
+        logger.setLevel(logging.INFO)
+
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+
+        ch = logging.StreamHandler()
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+
+        return logger
+
+    def _setup_server_socket(self):
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_socket.bind((self.host, self.port))
+        self.server_socket.settimeout(1)  # graceful shutdown timeout
+
+    @abstractmethod
+    def handle_command(self, cmd):
+        """Abstract method for handle of protocol-specific commands"""
+        pass
+
+    def _handle_client(self, conn, addr):
+        try:
+            self.logger.info(f"Клиент подключен: {addr}")
+            while self.running:
+                try:
+                    data = conn.recv(self.get_buffer())
+                    if not data:
+                        break
+
+                    self.logger.info(f"Получена команда: {data}")
+
+                    response = self.handle_command(data)
+                    if response:
+                        conn.sendall(response)
+                    self.logger.info(f"Отправлен ответ: {response}")
+
+                except (ConnectionResetError, socket.timeout):
+                    self.logger.error(f"Соединение разорвано по таймауту: {e}")
+                    break
+                except UnicodeDecodeError as e:
+                    self.logger.error(f"Неудалось разобрать команду: {data} (Ошибка: {e})")
+                except Exception as e:
+                    self.logger.error(f"Ошибка обработки команды: {data} (Ошибка: {e})")
+
+        finally:
+            conn.close()
+            self.logger.info(f"Соединение с {addr} закрыто")
+
+    def get_buffer(self):
+        return self.buffer
+
+    def get_tracking_mode(self):
+        return self.tracking_mode
+
+    def get_location(self):
+        return self.latitude_deg
+
+    def set_location(self, loc: Location):
+        self.location = loc
+
+    def start(self):
+        self.running = True
+        self.server_socket.listen()
+        self.logger.info(f"Сервер {self.name} запущен на {self.host}:{self.port}")
+
+        try:
+            while self.running:
+                try:
+                    conn, addr = self.server_socket.accept()
+                    client_thread = threading.Thread(
+                        target=self._handle_client,
+                        args=(conn, addr),
+                        daemon=True
+                    )
+                    client_thread.start()
+                except socket.timeout:
+                    continue
+        except Exception as e:
+            self.logger.error(f"Ошибка сервера: {e}")
+        finally:
+            self.stop()
+
+    def stop(self):
+        self.running = False
+        if self.server_socket:
+            self.server_socket.close()
+        self.logger.info(f"Сервер {self.name} остановлен")
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
