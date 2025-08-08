@@ -1,32 +1,24 @@
+import logging
 import socket
 import threading
-import logging
 from abc import ABC, abstractmethod
-from utils.tracking_mode import TrackingMode
-from location import Location
+
+from src.location import Location
+from src.utils.tracking_mode import TrackingMode
 
 
 class Server(ABC):
-    name = 'AstroPi Server'
+    name = 'AstroPi'
     buffer = 1024
     host = '0.0.0.0'
     port = 10001
     location = None
 
-    latitude_deg = 0  # A - градусы широты
-    latitude_min = 0  # B - минуты широты
-    latitude_sec = 0  # C - секунды широты
-    north_south = 0  # D - 0=N, 1=S
-
-    longitude_deg = 0  # E - градусы долготы
-    longitude_min = 0  # F - минуты долготы
-    longitude_sec = 0  # G - секунды долготы
-    east_west = 0  # H - 0=E, 1=W
     goto_in_progress = False
-    alignment_in_progress = False
+    alignment_completed = False
     tracking_mode = TrackingMode.EQ_NORTH
 
-    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi Server'):
+    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi'):
         self.host = host
         self.port = port
         self.name = name
@@ -34,13 +26,14 @@ class Server(ABC):
         self.server_socket = None
         self.logger = self._setup_logger()
         self._setup_server_socket()
-        self.location = Location()
+        self.location = Location.zero_north_east()
+
     def _setup_logger(self):
         logger = logging.getLogger(self.name)
         logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            '%(asctime)s - %(levelname)s - %(message)s'
         )
 
         ch = logging.StreamHandler()
@@ -95,7 +88,7 @@ class Server(ABC):
         return self.tracking_mode
 
     def get_location(self):
-        return self.latitude_deg
+        return self.location
 
     def set_location(self, loc: Location):
         self.location = loc
@@ -103,7 +96,8 @@ class Server(ABC):
     def start(self):
         self.running = True
         self.server_socket.listen()
-        self.logger.info(f"Сервер {self.name} запущен на {self.host}:{self.port}")
+        host_ip = socket.gethostbyname(socket.gethostname())
+        self.logger.info(f"Сервер {self.name} запущен на {host_ip}:{self.port}")
 
         try:
             while self.running:
