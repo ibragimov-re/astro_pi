@@ -3,6 +3,7 @@ from src.utils import utils
 from src.server import Server
 from src.nexstar.commands import Command, Device, Model
 
+
 # manual by commands https://s3.amazonaws.com/celestron-site-support-files/support_files/1154108406_nexstarcommprot.pdf
 
 
@@ -14,7 +15,7 @@ class ServerNexStar(Server):
     has_gps = False
 
     def __init__(self, host='0.0.0.0', port=4030):
-        super().__init__(host, port, Server.name + ' (NexStar)')
+        super().__init__(host, port, Server.name + ' [NexStar]')
 
     def get_buffer(self):
         return self.buffer
@@ -51,7 +52,7 @@ class ServerNexStar(Server):
             return self.get_version()
         elif data.startswith(Command.GOTO_IN_PROG):
             return self.is_goto_in_progress()
-        elif data.startswith(Command.ALIGN_IN_PROG):
+        elif data.startswith(Command.ALIGN_COMPLETE):
             return self.is_alignment_in_prog()
         elif data.startswith(Command.GET_TRACKING_MODE):
             return self.get_tracking_mode()
@@ -91,7 +92,7 @@ class ServerNexStar(Server):
             return Command.END
         elif byte_3 == Device.ALT_DEC_MOTOR:
             return Command.END
-        elif byte_3 == Device.GPS: # это GPS комманды
+        elif byte_3 == Device.GPS:  # это GPS команды
             return self.gps_commands(data)
         else:
             # Неизвестная команда
@@ -135,27 +136,34 @@ class ServerNexStar(Server):
         return bytes([self.goto_in_progress]) + Command.END
 
     def is_alignment_in_prog(self):
-        return bytes([self.alignment_in_progress]) + Command.END
+        return bytes([self.alignment_completed]) + Command.END
 
-    # Собираем байтовую строку
+    # Собираем байтовую строку кокординат
     def coord_bytes(self):
+        if not self.location:
+            return Command.END
+
+        lat = self.location.lat
+        long = self.location.long
+
         return bytes([
-            self.latitude_deg,
-            self.latitude_min,
-            self.latitude_sec,
-            self.north_south,
-            self.longitude_deg,
-            self.longitude_min,
-            self.longitude_sec,
-            self.east_west
+            lat.deg,
+            lat.min,
+            lat.sec,
+            self.location.north_south,
+            long.deg,
+            long.min,
+            long.sec,
+            self.location.east_west
         ]) + Command.END
 
     def get_ra_dec_precise(self):
-        return b"34AB0500,12CE0500#"
+        return b"34AB0500,12CE0500#"  # TODO: временное решение
 
 
 def get_time():
     return get_current_time_bytes()
+
 
 def get_current_time_bytes():
     now = utils.get_current_time()
@@ -168,8 +176,7 @@ def get_current_time_bytes():
         now.second,
         now.month,
         now.day,
-        now.year % 100, # год без века, 0-99
+        now.year % 100,  # год без века, 0-99
         tz_offset,
         is_dst
     ]) + Command.END
-

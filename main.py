@@ -1,7 +1,7 @@
 import argparse
 
-from lx200.lx200_server import ServerLX200
-from nexstar.nexstar_server import ServerNexStar
+from src.lx200.lx200_server import ServerLX200
+from src.nexstar.nexstar_server import ServerNexStar
 
 
 def main():

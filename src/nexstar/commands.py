@@ -15,15 +15,17 @@ class Command(bytes, Enum):
     GET_TIME = b'h'
     GET_TRACKING_MODE = b't'
     GOTO_IN_PROG = b'L'
-    ALIGN_IN_PROG = b'J'
+    ALIGN_COMPLETE = b'J'
     END = b'#'
     ZERO = b'0'
+
 
 class Device(IntEnum):
     AZM_RA_MOTOR = 16
     ALT_DEC_MOTOR = 17
     GPS = 176
     RTC = 178
+
 
 class Model(IntEnum):
     GPS_SERIES = 1
