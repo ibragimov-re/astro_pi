@@ -21,11 +21,12 @@
 
 ### Как запустить?
  
-1. Перенести `py` файлы на orange pi в папку `~/home/astropi` или выполнить скрипт `pullToOrangePi.sh`:
+1. Перенести всю папку `src` и `main.py` на orange pi в папку `~/home/astropi` или выполнить скрипт `pullToOrangePi.sh`:
 ```shell
-scp `ls | grep '.py'`  <user>@<orange_pi_host>:/home/astropi
+ssh root@orangepi3-lts "mkdir -p /home/astropi";          # create folder
+scp -rp ./src ./main.py root@orangepi3-lts:/home/astropi/ # copy src and main.py to device
 ```
-2. Запустить сервер через `main.py` с указанием протокола (по-умолчанию `lx200`), например `python3 main.py -p nexstar`
+2. Запустить сервер через `main.py` с указанием протокола (по-умолчанию `lx200`), например: `python3 main.py -p nexstar`
  
 ### Как подключится?
 
