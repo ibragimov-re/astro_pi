@@ -12,6 +12,9 @@ from src.utils import utils
 class Server(ABC):
     buffer = 1024
     name = 'AstroPi'
+    no_logging_commands = [b'e']
+
+    LOG_RAW_COMMANDS = False
 
     def __init__(self, host='0.0.0.0', port=10001, name='AstroPi'):
         self.host = host
@@ -22,6 +25,7 @@ class Server(ABC):
         self.logger = self._setup_logger()
         self._setup_server_socket()
         self.location = Location.zero_north_east()
+        self.has_gps = False
 
         self.goto_in_progress = False
         self.alignment_completed = True
@@ -60,25 +64,29 @@ class Server(ABC):
         try:
             self.logger.info(f"Клиент подключен: {addr}")
             while self.running:
+                data = None
                 try:
                     data = conn.recv(self.get_buffer())
                     if not data:
                         break
 
-                    self.logger.info(f"Получена команда: {data}")
+                    if self.LOG_RAW_COMMANDS:
+                        self.logger.info(f"Получена команда: {data}")
 
                     response = self.handle_command(data)
                     if response:
                         conn.sendall(response)
-                    self.logger.info(f"Отправлен ответ: {response}")
+
+                    if self.LOG_RAW_COMMANDS:
+                        self.logger.info(f"Отправлен ответ: {response}")
 
                 except (ConnectionResetError, socket.timeout):
-                    self.logger.error(f"Соединение разорвано по таймауту: {e}")
+                    self.logger.error(f"Соединение разорвано по таймауту: {socket.timeout}")
                     break
                 except UnicodeDecodeError as e:
                     self.logger.error(f"Неудалось разобрать команду: {data} (Ошибка: {e})")
                 except Exception as e:
-                    self.logger.error(f"Ошибка обработки команды: {data} (Ошибка: {e})")
+                    self.logger.error(f"Ошибка получения команды {data}: {e})")
 
         finally:
             conn.close()
@@ -90,11 +98,17 @@ class Server(ABC):
     def get_tracking_mode(self):
         return self.tracking_mode
 
+    def has_gps(self):
+        return self.has_gps
+
     def get_location(self):
         return self.location
 
     def set_location(self, loc: Location):
         self.location = loc
+
+    def cancel_goto(self):
+        self.goto_in_progress = False
 
     def start(self):
         self.running = True

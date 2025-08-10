@@ -6,6 +6,9 @@ import re
 import logging
 from time import time, ctime, strftime, localtime
 
+STANDARD = 0x10000     # 16-bit: 65536
+PRECISE = 0x1000000    # 24-bit: 16777216
+
 # \brief Functions library for format conversions.
 #
 #  Contains the necessary functions to calculate most commons format conversions used by the communications
@@ -284,18 +287,13 @@ def rad_2_stellarium_protocol(ra, dec):
 def hex_to_degrees(hex_str, is_precise=False):
     max_value = 4294967296 if is_precise else 65536
     hex_value = int(hex_str, 16)
-    degrees = (hex_value / max_value) * 360
-    return degrees
+    return (hex_value / max_value) * 360
 
 
 def degrees_to_hex(degrees, is_precise=False):
-    max_value = 4294967296 if is_precise else 65536
-    scaled_value = int((degrees % 360) / 360 * max_value)
+    degrees = degrees % 360  # normalize
+    rev = degrees / 360
 
     if is_precise:
-        hex_str = format(scaled_value, '08X')
-        hex_str = hex_str[:6] + '0500'  # e.g. 34AB0500
-    else:
-        hex_str = format(scaled_value, '04X')  # e.g. 34AB
-
-    return hex_str
+        return f"{int(rev * PRECISE) :08X}"
+    return f"{int(rev * STANDARD):04X}"

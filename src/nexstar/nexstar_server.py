@@ -1,22 +1,49 @@
+from nexstar.nexstar_utils import strip_command_letter, to_byte_command, get_time, set_time, bytes_to_location, \
+    location_to_bytes
 from src.location import Coordinate, Location
-from src.utils import utils
-from src.utils import coords
-from src.server import Server
 from src.nexstar.commands import Command, Device, Model
+from src.server import Server
+from src.utils import coords
+from utils.tracking_mode import TrackingMode
 
 
 # manual by commands https://s3.amazonaws.com/celestron-site-support-files/support_files/1154108406_nexstarcommprot.pdf
 
 
+class Mouth:
+    def __init__(self, model, has_gps, tracking_mode, name="No name NexStar mount with GoTo"):
+        self.name = name
+        self.model = model
+        self.has_gps = has_gps
+        self.tracking_mode = tracking_mode
+
+
+CGX_MOUTH = Mouth(Model.CGE, True, TrackingMode.EQ_NORTH, "Celestron Montatura CGX GoTo")
+SE_MOUTH = Mouth(Model.SE_4_5, True, TrackingMode.ALT_AZ, "Celestron SE 5")
+DEFAULT = CGX_MOUTH
+
+POLAR_RA_DEC = [38.012, 89.259]  # Polar Star RA/DEC
+ZERO_RA_DEC = [0.0, 0.0]
+DEFAULT_TARGET = ZERO_RA_DEC
+
+APP_VERSION = [4, 10]
+DEVICE_VERSION = [1, 0]
+
+BUFFER = 18  # in documentation, the longest command is 18 bytes
+
+
 class ServerNexStar(Server):
-    buffer = 8
-    major = 1
-    minor = 0
-    model = Model.ADVANCED_GT
-    has_gps = False
+    buffer = 18
+    major = APP_VERSION[0]
+    minor = APP_VERSION[1]
+    last_ra = DEFAULT_TARGET[0]
+    last_dec = DEFAULT_TARGET[1]
 
     def __init__(self, host='0.0.0.0', port=4030):
         super().__init__(host, port, Server.name + ' [NexStar]')
+        self.mouth = DEFAULT
+        self.last_ra = DEFAULT_TARGET[0]
+        self.last_dec = DEFAULT_TARGET[1]
 
     def get_buffer(self):
         return self.buffer
@@ -37,105 +64,105 @@ class ServerNexStar(Server):
 
         if data == Command.END:
             return b''
+        elif data == Command.ZERO:
+            return data  # not sure that's right
         elif data.startswith(Command.PASS_THROUGH):
             return self.pass_through(data)
         elif data.startswith(Command.GET_LOCATION):
             return self.get_location()
         elif data.startswith(Command.SET_LOCATION):
             return self.set_location(data)
-        elif data.startswith(Command.GET_RA_DEC_PREC):
+        elif data.startswith(Command.GET_RA_DEC_PRECISION):
             return self.get_ra_dec_precise()
         elif data.startswith(Command.SYNC_RA_DEC):
             return self.sync_ra_dec(data)
-        elif data.startswith(Command.SYNC_RA_DEC_PREC):
+        elif data.startswith(Command.SYNC_RA_DEC_PRECISION):
             return self.sync_ra_dec_precise(data)
         elif data.startswith(Command.GET_TIME):
             return get_time()
+        elif data.startswith(Command.SET_TIME):
+            return set_time(data)
         elif data.startswith(Command.HANDSHAKE):
             return self.handshake(data)
         elif data.startswith(Command.VERSION):
-            return self.get_version()
+            return self.get_app_version()
         elif data.startswith(Command.GOTO_IN_PROG):
             return self.is_goto_in_progress()
         elif data.startswith(Command.ALIGN_COMPLETE):
             return self.is_alignment_in_prog()
         elif data.startswith(Command.GET_TRACKING_MODE):
             return self.get_tracking_mode()
-        elif (data.startswith(Command.MODEL)):
+        elif data.startswith(Command.GOTO_RA_DEC):
+            return self.goto_ra_dec(data)
+        elif data.startswith(Command.GOTO_RA_DEC_PRECISION):
+            return self.goto_ra_dec_prec(data)
+        elif data.startswith(Command.MODEL):
             return self.get_model()
+        elif data.startswith(Command.CANCEL_GOTO):
+            return self.cancel_goto()
+        else:
+            return Command.END
 
-        return Command.END
+    def get_app_version(self):
+        self.logger.info(f"Версия приложения: v{self.major}.{self.minor}")
 
-    def get_version(self):
-        self.logger.info(f"Запрос версии, текущая версия: {self.major}.{self.minor}")
+        return self.version_to_byte(APP_VERSION[0], APP_VERSION[1])
 
-        return bytes([self.major, self.minor]) + Command.END
+    @staticmethod
+    def version_to_byte(major, minor):
+        return bytes([major, minor]) + Command.END
 
-    def get_device_version(self, cmd):
-        dev_code = cmd[2]  # Код устройства
+    def get_device_info(self, dev_code):
 
         try:
-            device = Device(dev_code)  # Преобразуем в Enum
+            device = Device(dev_code)
         except ValueError:
-            device = f"Unknown device ({dev_code})"
+            device = f"Неизвестное устройство код: {dev_code}"
 
         self.logger.info(f"Получена информация об устройстве. Device: {device.name}")
 
-        return self.get_version()
+        return self.get_device_version()
+
+    def get_device_version(self):
+        self.logger.info(f"Версия устройства: v{DEVICE_VERSION[0]}.{DEVICE_VERSION[1]}")
+
+        return self.version_to_byte(DEVICE_VERSION[0], DEVICE_VERSION[1])
 
     def get_model(self):
-        self.logger.info(f"Запрос модели. Текущая модель: {self.model}")
-        return self.model.value.to_bytes(1, 'little') + Command.END
+        self.logger.info(f"Текущая модель: {self.mouth.model.name}")
+        return to_byte_command(self.mouth.model.value)
 
     def get_tracking_mode(self):
-        return self.tracking_mode.to_bytes(1, 'little') + Command.END
+        return to_byte_command(self.mouth.tracking_mode.value)
+
+    def has_gps(self):
+        return self.mouth.has_gps
 
     def pass_through(self, data):
-        byte_3 = data[2]
+        dev_code = data[2]
 
-        if byte_3 == Device.AZM_RA_MOTOR:
-            return self.get_version()
-        elif byte_3 == Device.ALT_DEC_MOTOR:
-            return self.get_version()
-        elif byte_3 == Device.GPS:  # это GPS команды
-            return self.gps_commands(data)
+        if dev_code == Device.GPS:
+            return self.gps_commands(data)  # get GPS commands
         else:
-            # Неизвестная команда
-            return Command.END
+            return self.get_device_info(dev_code)
 
     def gps_commands(self, data):
         byte_4 = data[3]
         if byte_4 == 55:  # Is GPS Linked? (X > 0 if linked, 0 if not linked)
-            return bytes([0]) + Command.END if not self.has_gps else bytes([1]) + Command.END
+            return bytes([0]) + Command.END if not self.has_gps() else bytes([1]) + Command.END
         elif byte_4 == 254:  # Get Device Version
-            return self.get_version()  # not sure that's right
-        else:
-            # Неизвестная команда
+            self.logger.info(f"Версия GPS: v{1}.{3}")
+            return self.version_to_byte(1, 3)
+        else:  # Неизвестная команда
             return Command.END
 
     def get_location(self):
+        self.logger.info(f"Текущии GPS координаты: {self.location}")
         return self.coord_bytes()
 
     def set_location(self, data: bytes):
-        lat_deg = data[1]  # A
-        lat_min = data[2]  # B
-        lat_sec = data[3]  # C
-        north_south = data[4]  # D
-
-        long_deg = data[5]  # E
-        long_min = data[6]  # F
-        long_sec = data[7]  # G
-        east_west = data[8] if len(data) > 8 else 0  # H
-
-        lat_coord = Coordinate(deg=lat_deg, min=lat_min, sec=lat_sec)
-        long_coord = Coordinate(deg=long_deg, min=long_min, sec=long_sec)
-
-        self.location = Location(
-            lat=lat_coord,
-            long=long_coord,
-            north_south=north_south,
-            east_west=east_west
-        )
+        self.location = bytes_to_location(data)
+        self.logger.info(f"GPS координаты заданы: {self.location}")
 
     def is_goto_in_progress(self):
         return bytes([self.goto_in_progress]) + Command.END
@@ -148,61 +175,54 @@ class ServerNexStar(Server):
         if not self.location:
             return Command.END
 
-        lat = self.location.lat
-        long = self.location.long
-
-        coord_arr = [
-            lat.deg,
-            lat.min,
-            lat.sec,
-            self.location.north_south,
-            long.deg,
-            long.min,
-            long.sec
-            #self.location.east_west
-        ]
-
-        return bytes(coord_arr) + Command.END
+        return location_to_bytes(self.location) + Command.END
 
     def get_ra_dec_precise(self):
-        ra = coords.hex_to_degrees("34AB0500", True)
-        dec = coords.hex_to_degrees("12CE0500", True)
+        ra_hex = coords.degrees_to_hex(self.last_ra, True)
+        dec_hex = coords.degrees_to_hex(self.last_dec, True)
 
-        raP = 38.012
-        decP = 89.259
+        self.logger.info(f"Текущих координат наведения: RA:{self.last_ra} ({ra_hex}), DEC:{self.last_dec} ({dec_hex})")
 
-        raPhex = coords.degrees_to_hex(raP, True)
-        decPhex = coords.degrees_to_hex(decP, True)
-
-        return b"1B09A050,3F7D6305#"
-        #return b"34AB0500,12CE0500#"  # TODO: временное решение
-
-    def sync_ra_dec(self, data):
-        return Command.END
+        return dec_hex.encode('ascii') + b',' + ra_hex.encode('ascii') + Command.END
 
     def sync_ra_dec_precise(self, data):
-        ra = data.decode('ascii').lstrip('s')
-        self.last_ra = coords.hex_to_degrees(ra, True)
-        # why `DEC` is not receive? Only `RA`
+        return self.sync_ra_dec(data, True)
+
+    def sync_ra_dec(self, data, is_precise=False):
+        self.goto_in_progress = True
+        ra_dec = strip_command_letter(data)
+        ra_dec_arr = ra_dec.split(',')
+        ra_hex = ra_dec_arr[0]
+        dec_hex = ra_dec_arr[1]
+
+        self.last_ra = ra = coords.hex_to_degrees(ra_hex, is_precise)
+        self.last_dec = dec = coords.hex_to_degrees(dec_hex, is_precise)
+
+        if is_precise:
+            self.logger.info(f"Точное наведение по координатам: {ra} ({ra_hex}),{dec} ({dec_hex})")
+        else:
+            self.logger.info(f"Наведение по координатам: {ra},{dec}")
+
+        self.goto_in_progress = False
+
         return Command.END
 
+    def goto_ra_dec_prec(self, data):
+        return self.goto_ra_dec(data, True)
 
-def get_time():
-    return get_current_time_bytes()
+    def goto_ra_dec(self, data, is_precise=False):
+        self.goto_in_progress = True
+        ra_dec = strip_command_letter(data)
+        ra_dec_arr = ra_dec.split(',')
 
+        self.last_ra = ra = coords.hex_to_degrees(ra_dec_arr[0], is_precise)
+        self.last_dec = dec = coords.hex_to_degrees(ra_dec_arr[1], is_precise)
 
-def get_current_time_bytes():
-    now = utils.get_current_time()
-    tz_offset = utils.get_timezone_offset()
-    is_dst = utils.is_day_time()
+        if is_precise:
+            self.logger.info(f"Точная синхронизация по координатам: {ra},{dec}")
+        else:
+            self.logger.info(f"Синхронизация по координатам: {ra},{dec}")
 
-    return bytes([
-        now.hour,
-        now.minute,
-        now.second,
-        now.month,
-        now.day,
-        now.year % 100,  # год без века, 0-99
-        tz_offset,
-        is_dst
-    ]) + Command.END
+        self.goto_in_progress = False
+
+        return Command.END
