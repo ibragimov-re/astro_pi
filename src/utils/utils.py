@@ -28,3 +28,7 @@ def get_local_ip():
         return local_ip
     except Exception:
         return "127.0.0.1"
+
+
+def int_to_byte(val: int):
+    return val.to_bytes(1, 'little')
