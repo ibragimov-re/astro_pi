@@ -1,22 +1,17 @@
 import logging
 import socket
 import threading
+import time
 from abc import ABC, abstractmethod
 
 from src.location import Location
 from src.utils.tracking_mode import TrackingMode
+from src.utils import utils
 
 
 class Server(ABC):
-    name = 'AstroPi'
     buffer = 1024
-    host = '0.0.0.0'
-    port = 10001
-    location = None
-
-    goto_in_progress = False
-    alignment_completed = False
-    tracking_mode = TrackingMode.EQ_NORTH
+    name = 'AstroPi'
 
     def __init__(self, host='0.0.0.0', port=10001, name='AstroPi'):
         self.host = host
@@ -27,6 +22,14 @@ class Server(ABC):
         self.logger = self._setup_logger()
         self._setup_server_socket()
         self.location = Location.zero_north_east()
+
+        self.goto_in_progress = False
+        self.alignment_completed = True
+
+        self.tracking_mode = TrackingMode.EQ_NORTH
+        self.last_ra = 0.0
+        self.last_dec = 0.0
+        self.last_update_time = time.time()
 
     def _setup_logger(self):
         logger = logging.getLogger(self.name)
@@ -96,7 +99,7 @@ class Server(ABC):
     def start(self):
         self.running = True
         self.server_socket.listen()
-        host_ip = socket.gethostbyname(socket.gethostname())
+        host_ip = utils.get_local_ip()
         self.logger.info(f"Сервер {self.name} запущен на {host_ip}:{self.port}")
 
         try:

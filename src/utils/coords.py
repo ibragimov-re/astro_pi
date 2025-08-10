@@ -276,11 +276,26 @@ def toJ2000(ra, dec, mtime):
 # \param dec Declination (float)
 # \return List with (Right ascension, Declination) in the "Stellarium Telescope Protocol" format
 def rad_2_stellarium_protocol(ra, dec):
-
     ra_h = rad_2_hour(ra)
-
     dec_d = (dec * 180) / math.pi
-
-
     return (int(ra_h * (2147483648 / 12.0)), int(dec_d * (1073741824 / 90.0)))
 
+
+def hex_to_degrees(hex_str, is_precise=False):
+    max_value = 4294967296 if is_precise else 65536
+    hex_value = int(hex_str, 16)
+    degrees = (hex_value / max_value) * 360
+    return degrees
+
+
+def degrees_to_hex(degrees, is_precise=False):
+    max_value = 4294967296 if is_precise else 65536
+    scaled_value = int((degrees % 360) / 360 * max_value)
+
+    if is_precise:
+        hex_str = format(scaled_value, '08X')
+        hex_str = hex_str[:6] + '0500'  # e.g. 34AB0500
+    else:
+        hex_str = format(scaled_value, '04X')  # e.g. 34AB
+
+    return hex_str
