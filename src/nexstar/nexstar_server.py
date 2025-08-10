@@ -1,5 +1,6 @@
 from src.location import Coordinate, Location
 from src.utils import utils
+from src.utils import coords
 from src.server import Server
 from src.nexstar.commands import Command, Device, Model
 
@@ -44,6 +45,10 @@ class ServerNexStar(Server):
             return self.set_location(data)
         elif data.startswith(Command.GET_RA_DEC_PREC):
             return self.get_ra_dec_precise()
+        elif data.startswith(Command.SYNC_RA_DEC):
+            return self.sync_ra_dec(data)
+        elif data.startswith(Command.SYNC_RA_DEC_PREC):
+            return self.sync_ra_dec_precise(data)
         elif data.startswith(Command.GET_TIME):
             return get_time()
         elif data.startswith(Command.HANDSHAKE):
@@ -89,9 +94,9 @@ class ServerNexStar(Server):
         byte_3 = data[2]
 
         if byte_3 == Device.AZM_RA_MOTOR:
-            return Command.END
+            return self.get_version()
         elif byte_3 == Device.ALT_DEC_MOTOR:
-            return Command.END
+            return self.get_version()
         elif byte_3 == Device.GPS:  # это GPS команды
             return self.gps_commands(data)
         else:
@@ -103,7 +108,7 @@ class ServerNexStar(Server):
         if byte_4 == 55:  # Is GPS Linked? (X > 0 if linked, 0 if not linked)
             return bytes([0]) + Command.END if not self.has_gps else bytes([1]) + Command.END
         elif byte_4 == 254:  # Get Device Version
-            return self.get_version()
+            return self.get_version()  # not sure that's right
         else:
             # Неизвестная команда
             return Command.END
@@ -120,7 +125,7 @@ class ServerNexStar(Server):
         long_deg = data[5]  # E
         long_min = data[6]  # F
         long_sec = data[7]  # G
-        east_west = data[8]  # H
+        east_west = data[8] if len(data) > 8 else 0  # H
 
         lat_coord = Coordinate(deg=lat_deg, min=lat_min, sec=lat_sec)
         long_coord = Coordinate(deg=long_deg, min=long_min, sec=long_sec)
@@ -146,19 +151,40 @@ class ServerNexStar(Server):
         lat = self.location.lat
         long = self.location.long
 
-        return bytes([
+        coord_arr = [
             lat.deg,
             lat.min,
             lat.sec,
             self.location.north_south,
             long.deg,
             long.min,
-            long.sec,
-            self.location.east_west
-        ]) + Command.END
+            long.sec
+            #self.location.east_west
+        ]
+
+        return bytes(coord_arr) + Command.END
 
     def get_ra_dec_precise(self):
-        return b"34AB0500,12CE0500#"  # TODO: временное решение
+        ra = coords.hex_to_degrees("34AB0500", True)
+        dec = coords.hex_to_degrees("12CE0500", True)
+
+        raP = 38.012
+        decP = 89.259
+
+        raPhex = coords.degrees_to_hex(raP, True)
+        decPhex = coords.degrees_to_hex(decP, True)
+
+        return b"1B09A050,3F7D6305#"
+        #return b"34AB0500,12CE0500#"  # TODO: временное решение
+
+    def sync_ra_dec(self, data):
+        return Command.END
+
+    def sync_ra_dec_precise(self, data):
+        ra = data.decode('ascii').lstrip('s')
+        self.last_ra = coords.hex_to_degrees(ra, True)
+        # why `DEC` is not receive? Only `RA`
+        return Command.END
 
 
 def get_time():

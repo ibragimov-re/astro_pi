@@ -16,6 +16,8 @@ class Command(bytes, Enum):
     GET_TRACKING_MODE = b't'
     GOTO_IN_PROG = b'L'
     ALIGN_COMPLETE = b'J'
+    SYNC_RA_DEC = b'S'
+    SYNC_RA_DEC_PREC = b's'
     END = b'#'
     ZERO = b'0'
 
