@@ -6,8 +6,10 @@ import re
 import logging
 from time import time, ctime, strftime, localtime
 
-STANDARD = 0x10000     # 16-bit: 65536
-PRECISE = 0x1000000    # 24-bit: 16777216
+STANDARD = 0x10000      # 16-bit: 65536
+PRECISE = 0x1000000     # 24-bit: 16777216
+MASK_16_BIT = 0xFFFF    # 16-bit mask
+MASK_24_BIT = 0xFFFFFF  # 24-bit mask
 
 # \brief Functions library for format conversions.
 #
@@ -284,16 +286,25 @@ def rad_2_stellarium_protocol(ra, dec):
     return (int(ra_h * (2147483648 / 12.0)), int(dec_d * (1073741824 / 90.0)))
 
 
-def hex_to_degrees(hex_str, is_precise=False):
-    max_value = 4294967296 if is_precise else 65536
-    hex_value = int(hex_str, 16)
-    return (hex_value / max_value) * 360
+def hex_to_degrees(hex_degrees: str, precise: bool) -> float:
+    value = int(hex_degrees, 16)
+    if precise:
+        value >>= 8  # shift 8 bit padding
+        divisor = PRECISE
+    else:
+        divisor = STANDARD
+    return (value / divisor) * 360
 
+def degrees_to_hex(degrees: float, precise: bool) -> str:
+    degrees %= 360.0  # normalize angle
 
-def degrees_to_hex(degrees, is_precise=False):
-    degrees = degrees % 360  # normalize
-    rev = degrees / 360
+    if precise:
+        value = int((degrees / 360) * PRECISE) & MASK_24_BIT
+        value <<= 8  # Сдвигаем на 8 бит (добавляем 0x00)
+        hex_str = f"{value:08X}"  # padding to 32bit
+    else:
+        # Вычисляем 16-битное значение
+        value = int((degrees / 360) * STANDARD) & MASK_16_BIT
+        hex_str = f"{value:04X}"  # padding to 16bit
 
-    if is_precise:
-        return f"{int(rev * PRECISE) :08X}"
-    return f"{int(rev * STANDARD):04X}"
+    return hex_str

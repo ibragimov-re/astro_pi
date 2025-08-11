@@ -1,9 +1,8 @@
 from nexstar.nexstar_utils import strip_command_letter, to_byte_command, get_time, set_time, bytes_to_location, \
     location_to_bytes
-from src.location import Coordinate, Location
 from src.nexstar.commands import Command, Device, Model
 from src.server import Server
-from src.utils import coords
+from utils import coords
 from utils.tracking_mode import TrackingMode
 
 
@@ -22,9 +21,9 @@ CGX_MOUTH = Mouth(Model.CGE, True, TrackingMode.EQ_NORTH, "Celestron Montatura C
 SE_MOUTH = Mouth(Model.SE_4_5, True, TrackingMode.ALT_AZ, "Celestron SE 5")
 DEFAULT = CGX_MOUTH
 
-POLAR_RA_DEC = [38.012, 89.259]  # Polar Star RA/DEC
+POLAR_RA_DEC = [38.044259548187256, 89.259]  # Polar Star RA/DEC
 ZERO_RA_DEC = [0.0, 0.0]
-DEFAULT_TARGET = ZERO_RA_DEC
+DEFAULT_TARGET = POLAR_RA_DEC
 
 APP_VERSION = [4, 10]
 DEVICE_VERSION = [1, 0]
@@ -199,9 +198,9 @@ class ServerNexStar(Server):
         self.last_dec = dec = coords.hex_to_degrees(dec_hex, is_precise)
 
         if is_precise:
-            self.logger.info(f"Точное наведение по координатам: {ra} ({ra_hex}),{dec} ({dec_hex})")
+            self.logger.info(f"Точная синхронизация по координатам: {ra} ({ra_hex}),{dec} ({dec_hex})")
         else:
-            self.logger.info(f"Наведение по координатам: {ra},{dec}")
+            self.logger.info(f"Синхронизация по координатам: {ra},{dec}")
 
         self.goto_in_progress = False
 
@@ -219,9 +218,9 @@ class ServerNexStar(Server):
         self.last_dec = dec = coords.hex_to_degrees(ra_dec_arr[1], is_precise)
 
         if is_precise:
-            self.logger.info(f"Точная синхронизация по координатам: {ra},{dec}")
+            self.logger.info(f"Точное наведение по координатам: {ra},{dec}")
         else:
-            self.logger.info(f"Синхронизация по координатам: {ra},{dec}")
+            self.logger.info(f"Наведение по координатам: {ra},{dec}")
 
         self.goto_in_progress = False
 
