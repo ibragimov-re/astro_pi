@@ -5,7 +5,6 @@ import time
 from abc import ABC, abstractmethod
 
 from src.location import Location
-from utils import tracking_mode
 from utils import utils
 from utils.tracking_mode import TrackingMode
 

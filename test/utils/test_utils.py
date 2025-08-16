@@ -18,6 +18,8 @@ from src.utils.utils import hex_to_degrees, degrees_to_hex
     (359.99999992, "FFFFFFFF", True),
     (321.95743561, "E4F29000", True),
     (119.99999997, "55555555", True),
+    (10.689375, '0799F0F7', True),
+    (41.267474, '1D5883B1', True),
 ])
 def test_hex_to_degrees(degrees, hex_str, precise):
     assert hex_to_degrees(hex_str, precise) == degrees
