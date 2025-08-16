@@ -4,12 +4,8 @@
 import math
 import re
 import logging
-from time import time, ctime, strftime, localtime
+from time import ctime, strftime, localtime
 
-STANDARD = 0x10000      # 16-bit: 65536
-PRECISE = 0x1000000     # 24-bit: 16777216
-MASK_16_BIT = 0xFFFF    # 16-bit mask
-MASK_24_BIT = 0xFFFFFF  # 24-bit mask
 
 # \brief Functions library for format conversions.
 #
@@ -284,27 +280,3 @@ def rad_2_stellarium_protocol(ra, dec):
     ra_h = rad_2_hour(ra)
     dec_d = (dec * 180) / math.pi
     return (int(ra_h * (2147483648 / 12.0)), int(dec_d * (1073741824 / 90.0)))
-
-
-def hex_to_degrees(hex_degrees: str, precise: bool) -> float:
-    value = int(hex_degrees, 16)
-    if precise:
-        value >>= 8  # shift 8 bit padding
-        divisor = PRECISE
-    else:
-        divisor = STANDARD
-    return (value / divisor) * 360
-
-def degrees_to_hex(degrees: float, precise: bool) -> str:
-    degrees %= 360.0  # normalize angle
-
-    if precise:
-        value = int((degrees / 360) * PRECISE) & MASK_24_BIT
-        value <<= 8  # Сдвигаем на 8 бит (добавляем 0x00)
-        hex_str = f"{value:08X}"  # padding to 32bit
-    else:
-        # Вычисляем 16-битное значение
-        value = int((degrees / 360) * STANDARD) & MASK_16_BIT
-        hex_str = f"{value:04X}"  # padding to 16bit
-
-    return hex_str

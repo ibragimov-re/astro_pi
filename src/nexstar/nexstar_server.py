@@ -2,7 +2,7 @@ from nexstar.nexstar_utils import strip_command_letter, to_byte_command, get_tim
     location_to_bytes
 from src.nexstar.commands import Command, Device, Model
 from src.server import Server
-from utils import coords
+from utils import utils
 from utils.tracking_mode import TrackingMode
 
 
@@ -177,8 +177,8 @@ class ServerNexStar(Server):
         return location_to_bytes(self.location) + Command.END
 
     def get_ra_dec_precise(self):
-        ra_hex = coords.degrees_to_hex(self.last_ra, True)
-        dec_hex = coords.degrees_to_hex(self.last_dec, True)
+        ra_hex = utils.degrees_to_hex(self.last_ra, True)
+        dec_hex = utils.degrees_to_hex(self.last_dec, True)
 
         self.logger.info(f"Текущих координат наведения: RA:{self.last_ra} ({ra_hex}), DEC:{self.last_dec} ({dec_hex})")
 
@@ -191,14 +191,14 @@ class ServerNexStar(Server):
         self.goto_in_progress = True
         ra_dec = strip_command_letter(data)
         ra_dec_arr = ra_dec.split(',')
-        ra_hex = ra_dec_arr[0]
-        dec_hex = ra_dec_arr[1]
+        self.ra_hex = ra_dec_arr[0]
+        self.dec_hex = ra_dec_arr[1]
 
-        self.last_ra = ra = coords.hex_to_degrees(ra_hex, is_precise)
-        self.last_dec = dec = coords.hex_to_degrees(dec_hex, is_precise)
+        self.last_ra = ra = utils.hex_to_degrees(self.ra_hex, is_precise)
+        self.last_dec = dec = utils.hex_to_degrees(self.dec_hex, is_precise)
 
         if is_precise:
-            self.logger.info(f"Точная синхронизация по координатам: {ra} ({ra_hex}),{dec} ({dec_hex})")
+            self.logger.info(f"Точная синхронизация по координатам: {ra} ({self.ra_hex}),{dec} ({self.dec_hex})")
         else:
             self.logger.info(f"Синхронизация по координатам: {ra},{dec}")
 
@@ -214,8 +214,8 @@ class ServerNexStar(Server):
         ra_dec = strip_command_letter(data)
         ra_dec_arr = ra_dec.split(',')
 
-        self.last_ra = ra = coords.hex_to_degrees(ra_dec_arr[0], is_precise)
-        self.last_dec = dec = coords.hex_to_degrees(ra_dec_arr[1], is_precise)
+        self.last_ra = ra = utils.hex_to_degrees(ra_dec_arr[0], is_precise)
+        self.last_dec = dec = utils.hex_to_degrees(ra_dec_arr[1], is_precise)
 
         if is_precise:
             self.logger.info(f"Точное наведение по координатам: {ra},{dec}")
