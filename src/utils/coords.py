@@ -4,10 +4,8 @@
 import math
 import re
 import logging
-from time import time, ctime, strftime, localtime
+from time import ctime, strftime, localtime
 
-STANDARD = 0x10000     # 16-bit: 65536
-PRECISE = 0x1000000    # 24-bit: 16777216
 
 # \brief Functions library for format conversions.
 #
@@ -282,18 +280,3 @@ def rad_2_stellarium_protocol(ra, dec):
     ra_h = rad_2_hour(ra)
     dec_d = (dec * 180) / math.pi
     return (int(ra_h * (2147483648 / 12.0)), int(dec_d * (1073741824 / 90.0)))
-
-
-def hex_to_degrees(hex_str, is_precise=False):
-    max_value = 4294967296 if is_precise else 65536
-    hex_value = int(hex_str, 16)
-    return (hex_value / max_value) * 360
-
-
-def degrees_to_hex(degrees, is_precise=False):
-    degrees = degrees % 360  # normalize
-    rev = degrees / 360
-
-    if is_precise:
-        return f"{int(rev * PRECISE) :08X}"
-    return f"{int(rev * STANDARD):04X}"

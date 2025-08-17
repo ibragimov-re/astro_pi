@@ -5,8 +5,8 @@ import time
 from abc import ABC, abstractmethod
 
 from src.location import Location
-from src.utils.tracking_mode import TrackingMode
-from src.utils import utils
+from utils import utils
+from utils.tracking_mode import TrackingMode
 
 
 class Server(ABC):

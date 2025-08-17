@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 
 from location import Coordinate, Location
@@ -18,11 +19,6 @@ def get_time():
     return get_current_time_bytes()
 
 
-def set_time(data):
-    datetime_string = byte_to_date_time_utc_string(data)
-    return Command.END
-
-
 def byte_to_date_time_utc_string(data: bytes):
     hour = data[1]  # R
     minute = data[2]  # S
@@ -34,6 +30,20 @@ def byte_to_date_time_utc_string(data: bytes):
     is_dst = data[8]  # Q
 
     return f"{year}-{month}-{day} {hour}:{minute}:{second}"
+
+
+def byte_to_datetime_utc(data: bytes) -> datetime:
+    hour = int(data[1])  # Q
+    minute = int(data[2])  # R
+    second = int(data[3])  # S
+    month = int(data[4])  # T
+    day = int(data[5])  # U
+    year = int(data[6]) + 2000  # V
+    tz_offset = int(data[7])  # W
+    is_dst = bool(data[8])  # X 1 to enable Daylight Savings and 0 for Standard Time
+
+    datetime_utc = datetime.datetime(year, month, day, hour, minute, second)
+    return datetime_utc
 
 
 def set_hardware_clock(dt: datetime):
