@@ -67,14 +67,14 @@ def int_to_byte(val: int):
 
 def hex_to_degrees(hex_degrees: str, precise: bool) -> float:
     """
-    Первеводит шестнадцатиричный формат координат (0000, FFFF) в десятичне градусы (0, 360]
+    Переводит шестнадцатиричный формат координат (0000, FFFF) в десятичне градусы (0, 360]
 
     Параметры:
         hex_degrees (float): Исходный угол в шестнадцатеричном формате (может 4-х или 8 разрядным).
         precise (bool): Точный формат или стандартный
 
     Возвращает:
-        float: десятичне градусы точность зависит от параметра точности (precise),
+        float: десятичне градусы, точность зависит от параметра точности (precise),
                для стандартного это 19.8 арксекунды, а для точного 0.08 арксекунды.
 
     Примеры:
@@ -85,7 +85,7 @@ def hex_to_degrees(hex_degrees: str, precise: bool) -> float:
     """
     value = int(hex_degrees, 16)
 
-    # используем заранее просчитанный коофиуиент: 360 / PRECISISON, это эквивалентно: degrees / PRECISISON * 360
+    # используем заранее просчитанный коофициент: degrees * 360 / PRECISISON, это эквивалентно: degrees / PRECISISON * 360
     degrees = value * _SCALE_HEX_TO_DEG_CACHE[precise]
     degrees = normalize_angle(degrees)
 
@@ -94,7 +94,7 @@ def hex_to_degrees(hex_degrees: str, precise: bool) -> float:
 
 def degrees_to_hex(degrees: float, precise: bool) -> str:
     """
-    Первеводит десятичне градусы [0, 360) в шестнадцатиричный формат
+    Переводит десятичне градусы [0, 360) в шестнадцатиричный формат
 
     Параметры:
         degrees (float): Исходный угол в градусах (может быть отрицательным).
@@ -111,7 +111,7 @@ def degrees_to_hex(degrees: float, precise: bool) -> str:
     """
     degrees = normalize_angle(degrees)
 
-    # используем заранее просчитанный коофиуиент: PRECISISON / 360, это эквивалентно: degrees / 360 * PRECISISON
+    # используем заранее просчитанный коофициент: degrees * RECISISON / 360, это эквивалентно: degrees / 360 * PRECISISON
     int_value = round(degrees * _SCALE_DEG_TO_HEX_CACHE[precise])
 
     return int_to_hex(int_value, _DIGIT_CACHE[precise])
