@@ -1,7 +1,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
-
+#include <functional>
 #include "board_orangepi3lts.h"
 
 
