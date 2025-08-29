@@ -1,4 +1,3 @@
-#include <iostream>
 #include "board_orangepi3lts.h"
 
 int main() {
