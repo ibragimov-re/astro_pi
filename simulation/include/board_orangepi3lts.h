@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <functional>
 #include "pin.h"
 
 class OrangePi3LTS {
