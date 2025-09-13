@@ -3,28 +3,29 @@
 import OPi.GPIO as GPIO
 import time
 
+
+
 PIN_IN4 = "PD16"
 PIN_IN3 = "PD15"
 PIN_IN2 = "PD18"
 PIN_IN1 = "PD22"
 
-# Константы для двигателя 28BYJ-48
-STEPS_PER_REVOLUTION = 4096  # Полный оборот (360°)
-
+STEPS_PER_REVOLUTION = 4096  # Полный оборот (360 градусов) для двигателя 28BYJ-48
+PROGRESS_OUTPUT_TIMEOUT = 0.5 # С какой частотой в секундах выводит прогресс по вращению
 
 class MotorController:
     def __init__(self, in1, in2, in3, in4):
         self.pins = [in1, in2, in3, in4]
         self.is_active = False
-        self.current_sequence = 'half'  # По умолчанию полушаговый режим
+        self.current_sequence = 'half'  # По умолчанию полушаговый режим (более плавный)
 
-        # Настройка GPIO
+        # Задаем пины в архитектурном формате (пример: "PD22")
         GPIO.setmode(GPIO.SUNXI)
         for pin in self.pins:
             GPIO.setup(pin, GPIO.OUT)
             GPIO.output(pin, GPIO.LOW)
 
-        # Последовательности шагов с РАЗНЫМИ задержками
+        # Последовательности шагов. Для full режима нужны большие задержки
         self.sequences = {
             'full': {
                 'steps': [
@@ -33,8 +34,8 @@ class MotorController:
                     [0, 0, 1, 0],
                     [0, 0, 0, 1]
                 ],
-                'min_delay': 0.005,  # МИНИМАЛЬНАЯ задержка для full режима
-                'max_delay': 0.02  # МАКСИМАЛЬНАЯ задержка для full режима
+                'min_delay': 0.005,
+                'max_delay': 0.02
             },
             'half': {
                 'steps': [
@@ -47,13 +48,13 @@ class MotorController:
                     [0, 0, 0, 1],
                     [1, 0, 0, 1]
                 ],
-                'min_delay': 0.001,  # Меньшая задержка для half режима
-                'max_delay': 0.01  # Меньшая максимальная задержка
+                'min_delay': 0.001,
+                'max_delay': 0.01
             }
         }
 
         self.current_step = 0
-        self.set_sequence('half')  # Начинаем с полушагового режима
+        self.set_sequence('half')  # Полушагового режим по дефолту
 
     def set_sequence(self, seq_type='half'):
         """Выбор режима работы: 'full' или 'half'"""
@@ -105,7 +106,8 @@ class MotorController:
     def move(self, steps, speed=5):
         """
         Движение на указанное количество шагов
-        speed: 1-10 (1 - медленно, 10 - быстро)
+        steps: количество шагов (+ по часовой, - против часовой)
+        speed: скорость (1-10)
         """
         direction = 1 if steps >= 0 else -1
         steps_abs = abs(steps)
@@ -120,15 +122,42 @@ class MotorController:
 
         print(f"Задержка на шаг: {base_delay:.4f} сек")
 
+        # Переменные для отслеживания прогресса по времени
+        start_time = time.time()
+        last_progress_time = start_time
+        # Вывод прогресса каждые 0.5 секунды
         for i in range(steps_abs):
             self.current_step = (self.current_step + direction) % self.step_count
             self._set_pins(self.sequence[self.current_step])
             time.sleep(base_delay)
 
-            # Прогресс для длинных движений
-            if steps_abs > 100 and i % (steps_abs // 10) == 0:
-                progress = (i / steps_abs) * 100
-                print(f"Выполнено: {progress:.1f}%")
+            # Вывод прогресса по времени (каждые 0.5 секунды)
+            current_time = time.time()
+            if current_time - last_progress_time >= PROGRESS_OUTPUT_TIMEOUT:
+                self._print_progress(i, steps_abs, start_time)
+                last_progress_time = current_time
+
+        # Вывод финального прогресса
+        if steps_abs > 0:
+            self._print_progress(steps_abs, steps_abs, start_time)
+
+    def _print_progress(self, current_step, total_steps, start_time):
+        """Вывод прогресса выполнения"""
+        if total_steps == 0:
+            return
+
+        progress_percent = (current_step / total_steps) * 100
+        elapsed_time = time.time() - start_time
+
+        # Расчет оставшегося времени
+        if current_step > 0:
+            steps_per_second = current_step / elapsed_time
+            remaining_time = (total_steps - current_step) / steps_per_second
+            time_info = f", осталось: {remaining_time:.1f} сек"
+        else:
+            time_info = ""
+
+        print(f"Выполнено: {progress_percent:.1f}% ({current_step}/{total_steps} шагов{time_info})")
 
     def _set_pins(self, values):
         """Установка состояний пинов"""
@@ -208,14 +237,12 @@ def test_modes():
     try:
         print("=== ТЕСТ РЕЖИМОВ ===")
 
-        # Тест полношагового режима (МЕДЛЕННЕЕ)
         print("\n1. Тест FULL режима (скорость 3)")
         motor.set_sequence('full')
         motor.move_degrees(90, speed=3)  # Медленная скорость для full
 
         time.sleep(1)
 
-        # Тест полушагового режима (можно быстрее)
         print("\n2. Тест HALF режима (скорость 5)")
         motor.set_sequence('half')
         motor.move_degrees(-90, speed=5)  # Быстрее для half
