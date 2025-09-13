@@ -5,8 +5,8 @@ import time
 from abc import ABC, abstractmethod
 
 from src.location import Location
-from utils import utils
-from utils.tracking_mode import TrackingMode
+from .utils import astropi_utils
+from .utils.tracking_mode import TrackingMode
 
 
 class Server(ABC):
@@ -113,7 +113,7 @@ class Server(ABC):
     def start(self):
         self.running = True
         self.server_socket.listen()
-        host_ip = utils.get_local_ip()
+        host_ip = astropi_utils.get_local_ip()
         self.logger.info(f"Сервер {self.name} запущен на {host_ip}:{self.port}")
 
         try:

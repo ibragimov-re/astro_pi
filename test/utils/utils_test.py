@@ -1,5 +1,5 @@
 import pytest
-from src.utils.utils import hex_to_degrees, degrees_to_hex
+from src.utils.astropi_utils import hex_to_degrees, degrees_to_hex
 
 
 @pytest.mark.parametrize("degrees, hex_str, precise", [

@@ -1,12 +1,12 @@
 import datetime
 import logging
 
-from nexstar.nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
+from .nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
     location_to_bytes, byte_to_datetime_utc
 from src.nexstar.commands import Command, Device, Model
 from src.server import Server
-from utils import utils
-from utils.tracking_mode import TrackingMode
+from src.utils import astropi_utils
+from src.utils.tracking_mode import TrackingMode
 
 
 # manual by commands https://s3.amazonaws.com/celestron-site-support-files/support_files/1154108406_nexstarcommprot.pdf
@@ -202,10 +202,10 @@ class ServerNexStar(Server):
         return last_ra_hex.encode('ascii') + b',' + last_dec_hex.encode('ascii') + Command.END
 
     def get_last_dec_hex(self, precise: bool = True):
-        return utils.degrees_to_hex(self.last_dec, precise)
+        return astropi_utils.degrees_to_hex(self.last_dec, precise)
 
     def get_last_ra_hex(self, precise: bool = True):
-        return utils.degrees_to_hex(self.last_ra, precise)
+        return astropi_utils.degrees_to_hex(self.last_ra, precise)
 
     def sync_ra_dec_precise(self, data):
         return self.sync_ra_dec(data, True)
@@ -217,8 +217,8 @@ class ServerNexStar(Server):
         ra_hex = ra_dec_arr[0]
         dec_hex = ra_dec_arr[1]
 
-        self.last_ra = utils.hex_to_degrees(ra_hex, precise)
-        self.last_dec = utils.hex_to_degrees(dec_hex, precise)
+        self.last_ra = astropi_utils.hex_to_degrees(ra_hex, precise)
+        self.last_dec = astropi_utils.hex_to_degrees(dec_hex, precise)
 
         self.logger.info(f"Синхронизация по координатам: П.В (Ra):{self.last_ra} ({ra_hex}), Скл (Dec): {self.last_dec} ({dec_hex})")
 
@@ -237,8 +237,8 @@ class ServerNexStar(Server):
         ra_hex = ra_dec_arr[0]
         dec_hex = ra_dec_arr[1]
 
-        self.last_ra = utils.hex_to_degrees(ra_hex, precise)
-        self.last_dec = utils.hex_to_degrees(dec_hex, precise)
+        self.last_ra = astropi_utils.hex_to_degrees(ra_hex, precise)
+        self.last_dec = astropi_utils.hex_to_degrees(dec_hex, precise)
 
         self.logger.info(f"Наведение по координатам: П.В (Ra):{self.last_ra}, Скл (Dec): {self.last_dec}")
 
