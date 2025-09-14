@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
 
-import OPi.GPIO as GPIO
 import time
 
+import OPi.GPIO as GPIO
 
+PROGRESS_OUTPUT_TIMEOUT = 0.5   # С какой частотой в секундах выводит прогресс по вращению
 
-PIN_IN4 = "PD16"
-PIN_IN3 = "PD15"
-PIN_IN2 = "PD18"
-PIN_IN1 = "PD22"
-
-STEPS_PER_REVOLUTION = 4096  # Полный оборот (360 градусов) для двигателя 28BYJ-48
-PROGRESS_OUTPUT_TIMEOUT = 0.5 # С какой частотой в секундах выводит прогресс по вращению
 
 class MotorController:
-    def __init__(self, in1, in2, in3, in4):
+    def __init__(self, motor_params, in1, in2, in3, in4):
         self.pins = [in1, in2, in3, in4]
         self.is_active = False
         self.current_sequence = 'half'  # По умолчанию полушаговый режим (более плавный)
+        self.motor_params = motor_params
+        print(f"Инициализирован двигатель: {self.motor_params.name}")
+        print(f"Шагов на оборот: {self.motor_params.steps_per_turn:.0f}")
+        print(f"Коэффициент редукции: 1 / {(self.motor_params.steps_per_turn * self.motor_params.speed_variation_ratio):.000f}")
 
         # Задаем пины в архитектурном формате (пример: "PD22")
         GPIO.setmode(GPIO.SUNXI)
@@ -54,7 +52,7 @@ class MotorController:
         }
 
         self.current_step = 0
-        self.set_sequence('half')  # Полушагового режим по дефолту
+        self.set_sequence('half')  # Полушаговый режим по дефолту
 
     def set_sequence(self, seq_type='half'):
         """Выбор режима работы: 'full' или 'half'"""
@@ -94,7 +92,8 @@ class MotorController:
         """
         self.activate()
 
-        steps = int((degrees / 360.0) * STEPS_PER_REVOLUTION)
+        # Используем параметры двигателя для расчета шагов
+        steps = self.motor_params.steps_for_degrees(degrees)
 
         direction = "по часовой" if steps >= 0 else "против часовой"
         print(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
@@ -169,107 +168,3 @@ class MotorController:
         self.deactivate()
         GPIO.cleanup()
         print("Двигатель полностью отключен")
-
-
-# Интерактивный режим с выбором режима работы
-def interactive_mode():
-    """Режим интерактивного управления"""
-    motor = MotorController(in1=PIN_IN1, in2=PIN_IN2, in3=PIN_IN3, in4=PIN_IN4)
-
-    try:
-        print("=== ИНТЕРАКТИВНОЕ УПРАВЛЕНИЕ ===")
-        print("Доступные режимы:")
-        print("  full - полношаговый (больше момент, медленнее)")
-        print("  half - полушаговый (плавнее, быстрее)")
-
-        # Выбор режима
-        while True:
-            mode = input("Выберите режим (full/half, по умолчанию half): ").lower().strip()
-            if not mode:
-                mode = 'half'
-                break
-            elif mode in ['full', 'half']:
-                break
-            else:
-                print("Неверный режим! Выберите 'full' или 'half'")
-
-        motor.set_sequence(mode)
-
-        while True:
-            try:
-                angle_input = input("\nВведите угол (°) или 'q' для выхода: ")
-                if angle_input.lower() == 'q':
-                    break
-
-                angle = float(angle_input)
-
-                # Для full режима ограничиваем максимальную скорость
-                if mode == 'full':
-                    speed_input = input("Скорость (1-5, по умолчанию 3): ")
-                    max_speed = 5
-                else:
-                    speed_input = input("Скорость (1-10, по умолчанию 5): ")
-                    max_speed = 10
-
-                speed = int(speed_input) if speed_input.strip() else (3 if mode == 'full' else 5)
-                speed = max(1, min(max_speed, speed))
-
-                motor.move_degrees(angle, speed=speed)
-
-            except ValueError:
-                print("Ошибка ввода! Попробуйте снова.")
-            except KeyboardInterrupt:
-                break
-
-    except KeyboardInterrupt:
-        print("\nПрервано пользователем")
-    except Exception as e:
-        print(f"Ошибка: {e}")
-    finally:
-        motor.release()
-
-
-# Тестовый режим
-def test_modes():
-    """Тестирование обоих режимов"""
-    motor = MotorController(in1=PIN_IN1, in2=PIN_IN2, in3=PIN_IN3, in4=PIN_IN4)
-
-    try:
-        print("=== ТЕСТ РЕЖИМОВ ===")
-
-        print("\n1. Тест FULL режима (скорость 3)")
-        motor.set_sequence('full')
-        motor.move_degrees(90, speed=3)  # Медленная скорость для full
-
-        time.sleep(1)
-
-        print("\n2. Тест HALF режима (скорость 5)")
-        motor.set_sequence('half')
-        motor.move_degrees(-90, speed=5)  # Быстрее для half
-
-        print("\nТест завершен!")
-
-    except Exception as e:
-        print(f"Ошибка: {e}")
-    finally:
-        motor.release()
-
-
-if __name__ == "__main__":
-    print("Выберите тест:")
-    print("1 - Интерактивный режим с выбором режима")
-    print("2 - Тест обоих режимов")
-
-    try:
-        choice = input("Ваш выбор (1/2): ").strip()
-
-        if choice == "1":
-            interactive_mode()
-        elif choice == "2":
-            test_modes()
-        else:
-            print("Запуск теста режимов по умолчанию")
-            test_modes()
-
-    except KeyboardInterrupt:
-        print("\nПрервано пользователем")
