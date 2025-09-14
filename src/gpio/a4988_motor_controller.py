@@ -1,82 +1,134 @@
+#!/usr/bin/env python3
+
 import OPi.GPIO as GPIO
+import time
 
-from base_motor_controller import BaseMotorController
 
+class A4988MotorController:
+    """Контроллер для драйвера A4988"""
 
-class A4988MotorController(BaseMotorController):
-    """Контроллер для драйвера ULN2003"""
-
-    def __init__(self, motor_params, in1, in2, in3, in4):
-        super().__init__(motor_params)
-        self.pins = [in1, in2, in3, in4]
-        self.current_sequence = 'half'
-
-        # Настройка GPIO
+    def __init__(self, motor_params, step_pin, dir_pin, enable_pin=None, ms_pins=None):
+        GPIO.setwarnings(False)
         GPIO.setmode(GPIO.SUNXI)
-        for pin in self.pins:
-            GPIO.setup(pin, GPIO.OUT)
-            GPIO.output(pin, GPIO.LOW)
 
-        # Последовательности шагов
-        self.sequences = {
-            'full': {
-                'steps': [[1, 0, 0, 0],
-                          [0, 1, 0, 0],
-                          [0, 0, 1, 0],
-                          [0, 0, 0, 1]],
-                'min_delay': 0.005, 'max_delay': 0.02
-            },
-            'half': {
-                'steps': [[1, 0, 0, 0],
-                          [1, 1, 0, 0],
-                          [0, 1, 0, 0],
-                          [0, 1, 1, 0],
-                          [0, 0, 1, 0],
-                          [0, 0, 1, 1],
-                          [0, 0, 0, 1],
-                          [1, 0, 0, 1]],
-                'min_delay': 0.001, 'max_delay': 0.01
-            }
+        self.motor_params = motor_params
+
+        self.step_pin = step_pin
+        self.dir_pin = dir_pin
+        self.enable_pin = enable_pin
+        self.ms_pins = ms_pins
+
+        # Настройка пинов GPIO
+        GPIO.setup(self.step_pin, GPIO.OUT)
+        GPIO.setup(self.dir_pin, GPIO.OUT)
+        GPIO.output(self.step_pin, GPIO.LOW)
+        GPIO.output(self.dir_pin, GPIO.LOW)
+
+        if self.enable_pin:
+            GPIO.setup(self.enable_pin, GPIO.OUT)
+            GPIO.output(self.enable_pin, GPIO.HIGH)  # Выключено по умолчанию
+
+        # Конфигурация микрошага
+        self.microstep_config = {
+            1: [0, 0, 0],  # Full step
+            2: [1, 0, 0],  # 1/2 step
+            4: [0, 1, 0],  # 1/4 step
+            8: [1, 1, 0],  # 1/8 step
+            16: [1, 1, 1]  # 1/16 step
         }
 
-        self.current_step = 0
-        self.set_sequence('half')
+        # Инициализация микрошага
+        self.microstep_divisor = 1  # Значение по умолчанию
 
-    def set_sequence(self, seq_type='half'):
-        """Выбор режима работы"""
-        self.current_sequence = seq_type
-        self.sequence = self.sequences[seq_type]['steps']
-        self.step_count = len(self.sequence)
-        self.MIN_DELAY = self.sequences[seq_type]['min_delay']
-        self.MAX_DELAY = self.sequences[seq_type]['max_delay']
-        print(f"Режим: {seq_type}, задержки: {self.MIN_DELAY}-{self.MAX_DELAY} сек")
+        if self.ms_pins:
+            for pin in self.ms_pins:
+                GPIO.setup(pin, GPIO.OUT)
+            self.set_microstep(16)  # 1/16 по умолчанию
+        else:
+            print("Микрошаг не настроен (не заданы MS пины)")
+
+        self.is_active = False
+
+        print(f"Инициализирован A4988 для: {self.motor_params.name}")
+        print(f"Микрошаг: 1/{self.microstep_divisor}")
+
+    def set_microstep(self, divisor):
+        """Установка микрошага"""
+        if divisor in self.microstep_config and self.ms_pins:
+            for pin, value in zip(self.ms_pins, self.microstep_config[divisor]):
+                GPIO.output(pin, value)
+            self.microstep_divisor = divisor
+            print(f"Установлен микрошаг: 1/{divisor}")
+        else:
+            print(f"Невозможно установить микрошаг 1/{divisor}")
+
+    def move_degrees(self, degrees, speed=5):
+        """Поворот на заданное количество градусов"""
+        self.activate()
+
+        # Расчет шагов с учетом микрошага
+        steps = int((degrees / 360.0) * self.motor_params.steps_per_turn * self.microstep_divisor)
+
+        direction = "по часовой" if steps >= 0 else "против часовой"
+        print(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
+        print(f"Микрошаг: 1/{self.microstep_divisor}, Скорость: {speed}")
+
+        self.move(steps, speed)
+        self.deactivate()
+
+    def move(self, steps, speed=5):
+        """Движение на указанное количество шагов"""
+        if steps == 0:
+            return
+
+        direction = 1 if steps >= 0 else -1
+        steps_abs = abs(steps)
+
+        # Установка направления
+        GPIO.output(self.dir_pin, GPIO.HIGH if direction > 0 else GPIO.LOW)
+
+        # Расчет задержки
+        min_delay = 0.001  # Увеличил для надежности
+        max_delay = 0.02  # Увеличил для надежности
+        base_delay = max_delay - (speed - 1) * (max_delay - min_delay) / 9
+
+        print(f"Задержка на шаг: {base_delay:.6f} сек")
+
+        start_time = time.time()
+
+        # Генерация импульсов
+        for i in range(steps_abs):
+            GPIO.output(self.step_pin, GPIO.HIGH)
+            time.sleep(base_delay / 2)
+            GPIO.output(self.step_pin, GPIO.LOW)
+            time.sleep(base_delay / 2)
+
+            # Прогресс каждые 10%
+            if steps_abs > 10 and i % (steps_abs // 10) == 0:
+                progress = (i / steps_abs) * 100
+                elapsed = time.time() - start_time
+                print(f"Выполнено: {progress:.1f}% ({i}/{steps_abs} шагов, {elapsed:.2f} сек)")
+
+        print(f"Движение завершено. Время: {time.time() - start_time:.2f} сек")
 
     def activate(self):
+        """Включение драйвера"""
         if not self.is_active:
+            if self.enable_pin:
+                GPIO.output(self.enable_pin, GPIO.LOW)
             self.is_active = True
-            print("Двигатель активирован")
+            print("Драйвер A4988 включен")
 
     def deactivate(self):
+        """Выключение драйвера"""
         if self.is_active:
-            self._set_pins([0, 0, 0, 0])
+            if self.enable_pin:
+                GPIO.output(self.enable_pin, GPIO.HIGH)
             self.is_active = False
-            print("Двигатель деактивирован")
-
-    def perform_step(self, direction):
-        self.current_step = (self.current_step + direction) % self.step_count
-        self._set_pins(self.sequence[self.current_step])
-
-    def _calculate_delay(self, speed):
-        if self.current_sequence == 'full':
-            return self.MAX_DELAY - (speed - 1) * (self.MAX_DELAY - self.MIN_DELAY) / 9
-        else:
-            return self.MAX_DELAY - (speed - 1) * (self.MAX_DELAY - self.MIN_DELAY) / 9
-
-    def _set_pins(self, values):
-        for pin, value in zip(self.pins, values):
-            GPIO.output(pin, value)
+            print("Драйвер A4988 выключен")
 
     def release(self):
+        """Освобождение ресурсов"""
         self.deactivate()
         GPIO.cleanup()
-        print("Двигатель полностью отключен")
+        print("Контроллер A4988 отключен")

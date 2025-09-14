@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+
 class Motor:
     """Параметры шагового двигателя"""
 

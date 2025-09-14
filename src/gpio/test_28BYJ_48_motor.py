@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import OPi.GPIO as GPIO
 import time
 from uln2003_motor_controller import ULN2003Controller
 from motor import MOTORS
@@ -19,19 +20,20 @@ def interactive_mode():
     try:
         print("=== ИНТЕРАКТИВНОЕ УПРАВЛЕНИЕ ===")
         print("Доступные режимы:")
+        print("  wave - полношаговый, 4-ступенчатая последовательность (32 шага на оборот) - меньший момент, только одна катушка за раз, меньший потребляемый ток")
         print("  full - полношаговый, 4-ступенчатая последовательность (32 шага на оборот) - больше момент, медленнее")
         print("  half - полушаговый, 8-ступенчатая последовательность (64 шага на оборот) - плавнее, быстрее")
 
         # Выбор режима
         while True:
-            mode = input("Выберите режим (full/half, по умолчанию half): ").lower().strip()
+            mode = input("Выберите режим (wave/full/half, по умолчанию half): ").lower().strip()
             if not mode:
                 mode = 'half'
                 break
-            elif mode in ['full', 'half']:
+            elif mode in ['wave', 'full', 'half']:
                 break
             else:
-                print("Неверный режим! Выберите 'full' или 'half'")
+                print("Неверный режим! Выберите 'wave', 'full' или 'half'")
 
         motor.set_sequence(mode)
 
@@ -67,6 +69,7 @@ def interactive_mode():
         print(f"Ошибка: {e}")
     finally:
         motor.release()
+        GPIO.cleanup()
 
 
 def test_modes():
@@ -78,13 +81,19 @@ def test_modes():
 
         print("\n1. Тест FULL режима (скорость 3)")
         motor.set_sequence('full')
-        motor.move_degrees(90, speed=3)  # Медленная скорость для full
+        motor.move_degrees(60, speed=3)  # Медленная скорость для full
 
         time.sleep(1)
 
-        print("\n2. Тест HALF режима (скорость 5)")
+        print("\n2. Тест WAVE режима (скорость 3)")
+        motor.set_sequence('wave')
+        motor.move_degrees(-60, speed=3)  # Медленная скорость для wave
+
+        time.sleep(1)
+
+        print("\n3. Тест HALF режима (скорость 8)")
         motor.set_sequence('half')
-        motor.move_degrees(-90, speed=5)  # Быстрее для half
+        motor.move_degrees(60, speed=8)  # Быстрее для half
 
         print("\nТест завершен!")
 
