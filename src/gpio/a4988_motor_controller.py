@@ -63,6 +63,9 @@ class A4988MotorController:
             print(f"Невозможно установить микрошаг 1/{divisor}")
 
     def move_degrees(self, degrees, speed=5):
+
+        speed = self.motor_params.max_speed if speed > self.motor_params.max_speed else speed
+
         """Поворот на заданное количество градусов"""
         self.activate()
 
@@ -80,6 +83,8 @@ class A4988MotorController:
         """Движение на указанное количество шагов"""
         if steps == 0:
             return
+
+        speed = self.motor_params.max_speed if speed > self.motor_params.max_speed else speed
 
         direction = 1 if steps >= 0 else -1
         steps_abs = abs(steps)

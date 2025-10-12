@@ -3,7 +3,7 @@
 import OPi.GPIO as GPIO
 import time
 from a4988_motor_controller import A4988MotorController
-from motor import MOTORS
+from motor_list import MOTORS
 
 # двигатель 1
 PIN_DIR_FIRST = "PD16"     # 18 зеленый
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     GPIO.cleanup()
 
     print("Выберите тест:")
-    print("1 - Интерактивный режим с выбором режима")
+    print("1 - Интерактивное управление с выбором режима")
     print("2 - Тест обоих режимов")
 
     try:

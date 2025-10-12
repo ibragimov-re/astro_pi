@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import OPi.GPIO as GPIO
-from base_motor_controller import BaseMotorController
+from motor_controller import MotorController
 
 
-class ULN2003Controller(BaseMotorController):
+class ULN2003Controller(MotorController):
     """Контроллер для драйвера ULN2003"""
 
     def __init__(self, motor_params, in1, in2, in3, in4):

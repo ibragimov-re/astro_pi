@@ -3,7 +3,7 @@
 import OPi.GPIO as GPIO
 import time
 from uln2003_motor_controller import ULN2003Controller
-from motor import MOTORS
+from motor_list import MOTORS
 
 PIN_IN4 = "PD16"
 PIN_IN3 = "PD15"
@@ -105,7 +105,7 @@ def test_modes():
 
 if __name__ == "__main__":
     print("Выберите тест:")
-    print("1 - Интерактивный режим с выбором режима")
+    print("1 - Интерактивное управление с выбором режима")
     print("2 - Тест обоих режимов")
 
     try:

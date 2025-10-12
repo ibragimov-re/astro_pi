@@ -63,13 +63,14 @@ if __name__ == "__main__":
     motor = StepperMotor(CHIP, [IN1_PIN, IN2_PIN, IN3_PIN, IN4_PIN])
 
     try:
-        print("Двигатель вращается вперед (512 шагов)")
-        motor.rotate(64, delay=0.005)
+        steps = 64
+        print(f"Двигатель вращается по часовой стрелке ({steps} шага)")
+        motor.rotate(steps, delay=0.005)
 
         time.sleep(1)
 
-        print("Двигатель вращается назад")
-        motor.rotate(-64, delay=0.005)
+        print(f"Двигатель вращается против часовой стрелки ({steps} шага)")
+        motor.rotate(-steps, delay=0.005)
 
         print("Тест завершен")
 

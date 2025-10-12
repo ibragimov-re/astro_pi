@@ -6,7 +6,7 @@ from abc import abstractmethod
 PROGRESS_OUTPUT_TIMEOUT = 0.5
 
 
-class BaseMotorController:
+class MotorController:
     """Базовый класс для всех контроллеров шаговых двигателей"""
 
     # Общие фазы для всех контроллеров
@@ -20,6 +20,7 @@ class BaseMotorController:
             ],
             'min_delay': 0.005,
             'max_delay': 0.02,
+            'max_speed': 150,
             'description': 'Однофазный полношаговый (Wave Drive)'
         },
         'full': {  # Двухфазный полношаговый
@@ -31,6 +32,7 @@ class BaseMotorController:
             ],
             'min_delay': 0.004,
             'max_delay': 0.015,
+            'max_speed': 200,
             'description': 'Двухфазный полношаговый'
         },
         'half': {  # Полушаговый
@@ -46,6 +48,7 @@ class BaseMotorController:
             ],
             'min_delay': 0.001,
             'max_delay': 0.01,
+            'max_speed': 250,
             'description': 'Полушаговый'
         }
     }
@@ -73,6 +76,7 @@ class BaseMotorController:
         self.step_count = len(self.sequence)
         self.MIN_DELAY = sequence_data['min_delay']
         self.MAX_DELAY = sequence_data['max_delay']
+        self.MAX_SPEED = sequence_data['max_speed']
 
         print(f"Установлен режим: {sequence_data['description']}")
         print(f"Шагов на цикл: {self.step_count}, Задержки: {self.MIN_DELAY}-{self.MAX_DELAY} сек")
@@ -118,6 +122,8 @@ class BaseMotorController:
         """Поворот на заданное количество градусов"""
         self.activate()
 
+        speed = self.MAX_SPEED if speed > self.MAX_SPEED else speed
+
         steps = self.motor_params.steps_for_degrees(degrees)
         direction_str = "по часовой" if steps >= 0 else "против часовой"
 
@@ -132,6 +138,8 @@ class BaseMotorController:
         """Движение на указанное количество шагов"""
         if steps == 0:
             return
+
+        speed = self.MAX_SPEED if speed > self.MAX_SPEED else speed
 
         direction = 1 if steps >= 0 else -1
         steps_abs = abs(steps)
