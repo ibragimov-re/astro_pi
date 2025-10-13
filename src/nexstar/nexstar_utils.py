@@ -2,13 +2,13 @@ import datetime
 import logging
 import os
 
-from location import Coordinate, Location
-from nexstar.commands import Command
-from utils import utils
+from src.location import Coordinate, Location
+from .commands import Command
+from src.utils import astropi_utils
 
 
 def to_byte_command(val: int):
-    return utils.int_to_byte(val) + Command.END
+    return astropi_utils.int_to_byte(val) + Command.END
 
 
 def strip_command_letter(data):
@@ -53,9 +53,9 @@ def set_hardware_clock(dt: datetime):
 
 
 def get_current_time_bytes():
-    now = utils.get_current_time()
-    is_dst = utils.is_day_time()
-    tz_offset = utils.get_timezone_offset()
+    now = astropi_utils.get_current_time()
+    is_dst = astropi_utils.is_day_time()
+    tz_offset = astropi_utils.get_timezone_offset()
 
     return time_to_bytes(now.hour, now.minute, now.second, now.month, now.day, now.year, is_dst, tz_offset)
 

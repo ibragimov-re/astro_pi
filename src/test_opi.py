@@ -1,8 +1,15 @@
 import OPi.GPIO as GPIO
 import time
 
+# GPIO.setboard(GPIO.OPi3)
 # GPIO.setmode(GPIO.BOARD)  # Физические нумерация
-# led_pin = 7               # Физический пин 7 (PD22)
+# pin = 7               # Физический пин 7 (PD22), 12 (114, PD18)
+
+# GPIO.setmode(GPIO.BCM)
+# pin = 118
+
+# GPIO.setmode(GPIO.SOC)
+# pin = 118
 
 GPIO.setmode(GPIO.SUNXI)  # Логическая нумерация
 pin = "PD22"              # Логическое имя
