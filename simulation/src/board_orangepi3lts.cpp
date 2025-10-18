@@ -49,7 +49,13 @@ Pin& OrangePi3LTS::getPinByBoardNumber(int boardNumber) const {
 
 Pin& OrangePi3LTS::getPinBySocName(const std::string& socName) const {
     for (const auto& pin : pins) {
-        if (pin->getName() == socName) {
+        const auto pinType = pin->getType();
+        if (pinType != PinType::GPIO && pinType != PinType::SPECIAL) {
+            continue;
+        }
+
+        GpioPin& gpioPin = static_cast<GpioPin&>(*pin);
+        if (gpioPin.getSocName() == socName) {
             return *pin;
         }
     }
@@ -80,10 +86,10 @@ void OrangePi3LTS::printBoardPins() const {
         // Лямбла-выражение. Принимает ссылку на пин и возвращает контейнер со значениями пина
         auto formatPin = [](Pin& pin) {
             std::string gpioNum = "";
+            std::string soc = "";
             std::string name = pin.getName();
             std::string mode = "";
             std::string val = "";
-            std::string soc = "";
 
             if (pin.getType() == PinType::GPIO) {
                 GpioPin& gPin = static_cast<GpioPin&>(pin);
@@ -122,7 +128,8 @@ void OrangePi3LTS::printBoardPins() const {
             << " | " << std::setw(8) << std::right << lName
             << " | " << std::setw(4) << std::right << lMode
             << " | " << std::setw(1) << std::right << lVal
-            << " | " << std::setw(2) << i << " || " << std::setw(2) << i + 1
+            << " | " << std::setw(2) << i + 1
+            << " || "<< std::setw(2) << std::left << i + 2
             << " | " << std::setw(1) << std::left << rVal
             << " | " << std::setw(4) << std::left << rMode
             << " | " << std::setw(8) << std::left << rName
