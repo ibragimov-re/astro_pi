@@ -2,6 +2,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <functional>
 
 // Перечисление типов пинов
 enum class PinType {
@@ -21,7 +22,7 @@ enum class PinMode {
 
 // Перечисление состояний пинов GPIO или SPECIAL в режиме OUTPUT
 enum class GpioState {
-	LOW,     // Выкл
+	LOW,     // Выкл (по умолчанию)
 	HIGH     // Вкл
 };
 
@@ -29,86 +30,67 @@ enum class GpioState {
 // Общий родительский класс для всех пинов
 class Pin {
 public:
-	// Конструктор класса и инициализация его полей
-	Pin(int boardNumber_, const std::string& name_)
-		: boardNumber(boardNumber_), name(name_) { }
+	// Конструктор класса
+	Pin(int boardNumber_, const std::string& name_);
 
 	// Виртуальный деструктор для базового класса
-	virtual ~Pin() = default;
+	virtual ~Pin();
 
 	// Получить физический номер пина на плате
-	int getBoardNumber() const { 
-		return boardNumber;
-	}
+	int getBoardNumber() const;
 
 	// Получить имя пина
-	std::string getName() const {
-		return name;
-	}
+	std::string getName() const;
 
-	// Чисто виртуальный метод, который обязует все классы-наследники
-	// возвращать свой тип пина (GPIO, POWER, GROUND, SPECIAL)
+	// Получить тип пина
 	virtual PinType getType() const = 0;
 
+	// Функция обратного вызова (callback), вызываемая при изменении состояния или режима пина
+	using StateOrModeChangeCallback = std::function<void(const Pin*)>;
+
+	// Устанавливает callback, который будет вызван при изменении состояния или режима пина
+	void setOnChangeCallback(StateOrModeChangeCallback cb) const;
+
 protected:
+	// Вызывает callback, уведомляя подписчика (функцию в onChange) о том, что состояние или режим пина изменились
+	void notifyChangeStateOrMode() const;
+
 	int boardNumber;  // Физический номер пина на плате (1-26)
 	std::string name; // Имя пина на плате
+
+private:
+	// Callback, вызываемый при изменении состояния или режима пина.
+	// Отмечен как mutable, чтобы его можно было устанавливать из const методов,
+	// т.к. установка callback не меняет логическое состояние пина.
+	mutable StateOrModeChangeCallback onChange;
 };
 
 
 // Производный класс для GPIO пинов
 class GpioPin : public Pin {
 public:
-	GpioPin(int boardNumber_, const std::string& name_, const std::string& socName_, int gpioNumber_)
-		: Pin(boardNumber_, name_), // Инициализация членов базового класса
-		socName(socName_),
-		gpioNumber(gpioNumber_),
-		// По умолчанию пин будет инициализироваться с режимом OFF и состоянием LOW
-		mode(PinMode::OFF),
-		state(GpioState::LOW) { }
+	GpioPin(int boardNumber_, const std::string& name_, const std::string& socName_, int gpioNumber_);
 
 	// Получить имя контакта на сокете
-	std::string getSocName() const {
-		return socName;
-	}
+	std::string getSocName() const;
 
 	// Получить номер GPIO
-	int getGpioNumber() const {
-		return gpioNumber;
-	}
+	int getGpioNumber() const;
 
 	// Получить текущий режим работы пина
-	PinMode getMode() const {
-		return mode;
-	}
-
-	// Установить режим работы пина (только INPUT или OUTPUT)
-	virtual void setMode(PinMode newMode) {
-		if (newMode == PinMode::ALT) {
-			throw std::logic_error("ALT mode is not supported on plain GPIO pins");
-		}
-		mode = newMode;
-	}
-
-	// Установить состояние пина (LOW или HIGH), только если в режиме OUTPUT
-	void setState(GpioState newState) {
-		if (mode != PinMode::OUTPUT) {
-			throw std::logic_error("Cannot write the state when pin is not in OUTPUT mode");
-		}
-		else {
-			state = newState;
-		}
-	}
+	PinMode getMode() const;
 
 	// Получить текущее состояние пина
-	virtual GpioState getState() const {
-		return state;
-	}
+	virtual GpioState getState() const;
 
-	// Вернуть тип пина
-	PinType getType() const override {
-		return PinType::GPIO;
-	}
+	// Получить тип пина
+	PinType getType() const;
+
+	// Установить режим работы пина (только INPUT или OUTPUT)
+	virtual void setMode(PinMode newMode);
+
+	// Установить состояние пина (LOW или HIGH), только если в режиме OUTPUT
+	void setState(GpioState newState);
 
 protected:
 	std::string socName;  // Имя контакта на сокете (PD26, PL10, PH4 и т.п.)
@@ -123,34 +105,19 @@ protected:
 class SpecialPin : public GpioPin {
 public:
 	SpecialPin(int boardNumber_, const std::string& name_,
-	const std::string& socName_, int gpioNumber_, const std::string& altFunction_)
-		: GpioPin(boardNumber_, name_, socName_, gpioNumber_),
-		altFunction(altFunction_) { }
-
-	// Установить режим работы пина
-	virtual void setMode(PinMode newMode) override {
-		mode = newMode;
-	}
+		const std::string& socName_, int gpioNumber_, const std::string& altFunction_);
 
 	// Получить текущее состояние пина
-	virtual GpioState getState() const override {
-		if (mode == PinMode::ALT) {
-			throw std::logic_error("Pin state unavailable in ALT mode");
-		}
-		else {
-			return state;
-		}
-	}
+	virtual GpioState getState() const override;
+
+	// Получить тип пина
+	PinType getType() const override;
 
 	// Получить ALT-функцию пина
-	std::string getAltFunction() const {
-		return altFunction;
-	}
+	std::string getAltFunction() const;
 
-	// Вернуть тип пина
-	PinType getType() const override {
-		return PinType::SPECIAL;
-	}
+	// Установить режим работы пина
+	virtual void setMode(PinMode newMode);
 
 private:
 	std::string altFunction; // ALT-функция пина
@@ -160,24 +127,18 @@ private:
 // Производный класс для пинов питания
 class PowerPin : public Pin {
 public:
-	PowerPin (int boardNumber_, const std::string& name_)
-		: Pin(boardNumber_, name_) { }
+	PowerPin(int boardNumber_, const std::string& name_);
 
-	// Вернуть тип пина
-	PinType getType() const override {
-		return PinType::POWER;
-	}
+	// Получить тип пина
+	PinType getType() const override;
 };
 
 
 // Производный класс для пинов GND
 class GroundPin : public Pin {
 public:
-	GroundPin (int boardNumber_, const std::string& name_)
-		: Pin(boardNumber_, name_) { }
+	GroundPin(int boardNumber_, const std::string& name_);
 
-	// Вернуть тип пина
-	PinType getType() const override {
-		return PinType::GROUND;
-	}
+	// Получить тип пина
+	PinType getType() const override;
 };
