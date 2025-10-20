@@ -1,0 +1,9 @@
+# Visual Studio Project files
+.vs
+build
+
+# Kompas API generated files
+kAPI7.tlh
+kAPI7.tli
+ksConstants.tlh
+ksConstants3D.tlh
