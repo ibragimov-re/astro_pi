@@ -1,26 +1,52 @@
+#include "pch.h"
 #include "board_orangepi3lts.h"
+#include "ks_binder.h"
+#include "utils.h"
+#include "gpio_test.h"
+#include "iostream"
+#include <chrono>
+
 
 int main() {
 
-    // Тестовый код с изменением режима, состояния пинов и печатью общей таблицы
+    try {
+        consoleUtils::printMessage(L"KOPIS (Kompas-3D Orange Pi Simulator)\n\n");
+        
+        consoleUtils::printMessage(L"Setting up board...\n");
+        auto startTimeSetupBoard = std::chrono::high_resolution_clock::now();
+        OrangePi3LTS board;
+        KsBinder ksBinder(board);
+        auto endTimeSetupBoard = std::chrono::high_resolution_clock::now();
+        auto durationInMillisecondsSetupBoard = duration_cast<std::chrono::milliseconds>(endTimeSetupBoard - startTimeSetupBoard);
 
-    OrangePi3LTS board;
+        consoleUtils::printMessage(L"[OK] Board setup done. Duration: " +
+            std::to_wstring(durationInMillisecondsSetupBoard.count()) + L" ms\n");
+        
 
-    GpioPin& pin12 = static_cast<GpioPin&>(board.getPinByBoardNumber(12));
-    pin12.setMode(PinMode::OUTPUT);
-    pin12.setState(GpioState::HIGH);
 
-    GpioPin& pin19 = static_cast<SpecialPin&>(board.getPinByBoardNumber(19));
-    pin19.setMode(PinMode::ALT);
-    GpioPin& pin21 = static_cast<SpecialPin&>(board.getPinByBoardNumber(21));
-    pin21.setMode(PinMode::ALT);
-    GpioPin& pin23 = static_cast<SpecialPin&>(board.getPinByBoardNumber(23));
-    pin23.setMode(PinMode::ALT);
+        consoleUtils::printMessage(L"\nRunning GPIO program...\n");
+        auto startTimeRunGpioProg = std::chrono::high_resolution_clock::now();
 
-    GpioPin& pin15 = static_cast<GpioPin&>(board.getPinByBoardNumber(15));
-    pin15.setMode(PinMode::INPUT);
 
-    board.printBoardPins();
+        // Запуск тестового кода
+        // В будущем здесь будет выполняться код управляющей программы на python через обертку pybind
+        gpioTest::RunGpioProgram(board);
+
+
+        auto endTimeRunGpioProg = std::chrono::high_resolution_clock::now();
+        auto durationInMillisecondsRunGpioProg = duration_cast<std::chrono::milliseconds>(endTimeRunGpioProg - startTimeRunGpioProg);
+
+        consoleUtils::printMessage(L"[OK] GPIO program finished. Duration: " +
+            std::to_wstring(durationInMillisecondsRunGpioProg.count()) + L" ms\n\n");
+
+
+
+        consoleUtils::printMessage(L"Turning simulator off...\n");
+    }
+    catch (const std::exception& ex) {
+        std::cerr << "# [PROGRAM CRASHED] " << "Exception: " << ex.what() << "\n";
+        return 1;
+    }
 
     return 0;
 }
