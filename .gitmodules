@@ -1,0 +1,4 @@
+[submodule "simulation/extern/pybind11"]
+	path = simulation/extern/pybind11
+	url = https://github.com/pybind/pybind11
+	branch = stable
