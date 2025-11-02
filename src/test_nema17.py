@@ -3,8 +3,9 @@
 import OPi.GPIO as GPIO
 import time
 import threading
-from a4988_motor_controller import A4988MotorController
-from motor_list import MOTORS
+
+from gpio.a4988_motor_controller import A4988MotorController
+from gpio.motor_list import MOTORS
 
 # двигатель 1
 PIN_DIR_FIRST = "PD16"      # 18 зеленый
@@ -39,7 +40,6 @@ def interactive_mode():
 
     try:
         print("=== ИНТЕРАКТИВНОЕ УПРАВЛЕНИЕ ===")
-        print("Двигатели будут запускаться ОДНОВРЕМЕННО")
 
         while True:
             try:
@@ -63,7 +63,7 @@ def interactive_mode():
                 motor.set_microstep(ms)
                 motor2.set_microstep(ms)
 
-                print(f"Запуск ДВУХ двигателей одновременно: {angle}°, скорость {speed}, микрошаг 1/{ms}")
+                print(f"Запуск двигателей: {angle}°, скорость {speed}, микрошаг 1/{ms}")
 
                 # Создаем потоки для каждого двигателя
                 thread1 = threading.Thread(target=move_motor_sync, args=(motor, angle, speed))
@@ -77,7 +77,7 @@ def interactive_mode():
                 thread1.join()
                 thread2.join()
 
-                print("Оба двигателя завершили движение")
+                print("Поворот завершен")
 
             except ValueError:
                 print("Ошибка ввода! Попробуйте снова.")
@@ -99,7 +99,7 @@ def test_modes():
     motor2 = A4988MotorController(CURRENT_MOTOR, PIN_STEP_SECOND, PIN_DIR_SECOND, PIN_ENABLE_SECOND)
 
     try:
-        print("=== ТЕСТ РЕЖИМОВ (ОДНОВРЕМЕННЫЙ) ===")
+        print("=== ТЕСТ РЕЖИМОВ ===")
 
         test_angles = [180, -90]
         test_speed = 3
@@ -113,7 +113,7 @@ def test_modes():
 
             for angle in test_angles:
                 reduced_angle = angle / microstep
-                print(f"ОДНОВРЕМЕННЫЙ поворот на {reduced_angle}°")
+                print(f"поворот на {reduced_angle}°")
 
                 # Создаем и запускаем потоки
                 thread1 = threading.Thread(target=move_motor_sync, args=(motor, reduced_angle, test_speed))
@@ -126,7 +126,7 @@ def test_modes():
                 thread1.join()
                 thread2.join()
 
-                print("Оба двигателя завершили движение")
+                print("Поворот завершен")
                 time.sleep(1)
 
         print("\nТест завершен!")
@@ -142,8 +142,8 @@ if __name__ == "__main__":
     GPIO.cleanup()
 
     print("Выберите тест:")
-    print("1 - Интерактивное управление с ОДНОВРЕМЕННЫМ запуском")
-    print("2 - Тест обоих режимов с ОДНОВРЕМЕННЫМ запуском")
+    print("1 - Интерактивное управление")
+    print("2 - Автоматический тест всех режимов")
 
     try:
         choice = input("Ваш выбор (1/2): ").strip()

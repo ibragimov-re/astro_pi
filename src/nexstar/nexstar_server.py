@@ -1,5 +1,11 @@
 import datetime
 import logging
+import threading
+
+from gpio.mouth_eq_controller import MouthEqController
+from mouth.mouth import Mouth
+from src.gpio.motor_list import MOTORS
+from src.gpio.a4988_motor_controller import A4988MotorController
 
 from .nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
     location_to_bytes, byte_to_datetime_utc
@@ -11,18 +17,24 @@ from src.utils.tracking_mode import TrackingMode
 
 # manual by commands https://s3.amazonaws.com/celestron-site-support-files/support_files/1154108406_nexstarcommprot.pdf
 
+CURRENT_MOTOR = MOTORS.get('NEMA17')
 
-class Mouth:
-    def __init__(self, model, has_gps, tracking_mode, name="No name NexStar mount with GoTo"):
-        self.name = name
-        self.model = model
-        self.has_gps = has_gps
-        self.tracking_mode = tracking_mode  # как я понял это определяет какой будет тип компенсации вращения - по экваториальной или азимутальной оси
+# двигатель Ra
+PIN_DIR_RA = "PD16"      # 18 зеленый
+PIN_STEP_RA = "PD15"     # 16 синий
+PIN_ENABLE_RA = "PD18"   # 12 фиолетовый
 
+# двигатель Dec
+PIN_DIR_DEC = "PD22"     # 7 зеленый
+PIN_STEP_DEC = "PD25"    # 5 синий
+PIN_ENABLE_DEC = "PD26"  # 3 фиолетовый
+
+MOTOR_RA_CONTROLLER = A4988MotorController(CURRENT_MOTOR, PIN_STEP_RA, PIN_DIR_RA, PIN_ENABLE_RA)
+MOTOR_DEC_CONTROLLER = A4988MotorController(CURRENT_MOTOR, PIN_STEP_DEC, PIN_DIR_DEC, PIN_ENABLE_DEC)
 
 CGX_MOUTH = Mouth(Model.CGE, True, TrackingMode.EQ_NORTH, "Celestron Montatura CGX GoTo")
 SE_MOUTH = Mouth(Model.SE_4_5, True, TrackingMode.ALT_AZ, "Celestron SE 5")
-DEFAULT = SE_MOUTH
+DEFAULT_MOUTH = SE_MOUTH
 
 POLAR_RA_DEC = [38.044259548187256, 89.259]  # Polar Star RA/DEC
 ZERO_RA_DEC = [0.0, 0.0]
@@ -43,7 +55,7 @@ class ServerNexStar(Server):
 
     def __init__(self, host='0.0.0.0', port=4030):
         super().__init__(host, port, Server.name + ' [NexStar]')
-        self.mouth = DEFAULT
+        self.mouth = MouthEqController(DEFAULT_MOUTH, MOTOR_RA_CONTROLLER, MOTOR_DEC_CONTROLLER)
         self.last_ra = DEFAULT_TARGET[0]
         self.last_dec = DEFAULT_TARGET[1]
 
@@ -236,12 +248,16 @@ class ServerNexStar(Server):
 
         ra_hex = ra_dec_arr[0]
         dec_hex = ra_dec_arr[1]
+        ra_degrees = astropi_utils.hex_to_degrees(ra_hex, precise)
+        dec_degrees = astropi_utils.hex_to_degrees(dec_hex, precise)
 
-        self.last_ra = astropi_utils.hex_to_degrees(ra_hex, precise)
-        self.last_dec = astropi_utils.hex_to_degrees(dec_hex, precise)
+        cur_ra_dec = self.mouth.goto(ra_degrees, dec_degrees)
+        print(f"Текущие координаты: {cur_ra_dec}")
+        self.logger.info(f"Текущие координаты: {cur_ra_dec}")
+
+        self.last_ra = ra_degrees
+        self.last_dec = dec_degrees
 
         self.logger.info(f"Наведение по координатам: П.В (Ra):{self.last_ra}, Скл (Dec): {self.last_dec}")
-
-        self.goto_in_progress = False
 
         return Command.END

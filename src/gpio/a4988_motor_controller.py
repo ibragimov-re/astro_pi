@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import OPi.GPIO as GPIO
+import threading
 import time
 
 
@@ -17,6 +18,9 @@ class A4988MotorController:
         self.dir_pin = dir_pin
         self.enable_pin = enable_pin
         self.ms_pins = ms_pins
+
+        # Блокировка для потокобезопасности
+        self.lock = threading.Lock()
 
         # Настройка пинов GPIO
         GPIO.setup(self.step_pin, GPIO.OUT)
@@ -63,21 +67,19 @@ class A4988MotorController:
             print(f"Невозможно установить микрошаг 1/{divisor}")
 
     def move_degrees(self, degrees, speed=5):
-
-        speed = self.motor_params.max_speed if speed > self.motor_params.max_speed else speed
-
         """Поворот на заданное количество градусов"""
-        self.activate()
+        with self.lock:  # thread safety
+            self.activate()
 
-        # Расчет шагов с учетом микрошага
-        steps = int((degrees / 360.0) * self.motor_params.steps_per_turn * self.microstep_divisor)
+            # Расчет шагов с учетом микрошага
+            steps = int((degrees / 360.0) * self.motor_params.steps_per_turn * self.microstep_divisor)
 
-        direction = "по часовой" if steps >= 0 else "против часовой"
-        print(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
-        print(f"Микрошаг: 1/{self.microstep_divisor}, Скорость: {speed}")
+            direction = "по часовой" if steps >= 0 else "против часовой"
+            print(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
+            print(f"Микрошаг: 1/{self.microstep_divisor}, Скорость: {speed}")
 
-        self.move(steps, speed)
-        self.deactivate()
+            self.move(steps, speed)
+            self.deactivate()
 
     def move(self, steps, speed=5):
         """Движение на указанное количество шагов"""
@@ -137,3 +139,6 @@ class A4988MotorController:
         self.deactivate()
         GPIO.cleanup()
         print("Контроллер A4988 отключен")
+
+    def inProgress(self):
+        return self.is_active
