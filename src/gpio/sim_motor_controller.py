@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 
-#import OPi.GPIO as GPIO
-import OPi.GPIO as GPIO
 import threading
 import time
 
 
-class A4988MotorController:
+class SimMotorController:
     """Контроллер для драйвера A4988"""
 
     def __init__(self, motor_params, step_pin, dir_pin, enable_pin=None, ms_pins=None):
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.SUNXI)
 
         self.motor_params = motor_params
 
@@ -22,16 +18,6 @@ class A4988MotorController:
 
         # Блокировка для потокобезопасности
         self.lock = threading.Lock()
-
-        # Настройка пинов GPIO
-        GPIO.setup(self.step_pin, GPIO.OUT)
-        GPIO.setup(self.dir_pin, GPIO.OUT)
-        GPIO.output(self.step_pin, GPIO.LOW)
-        GPIO.output(self.dir_pin, GPIO.LOW)
-
-        if self.enable_pin:
-            GPIO.setup(self.enable_pin, GPIO.OUT)
-            GPIO.output(self.enable_pin, GPIO.HIGH)  # Выключено по умолчанию
 
         # Конфигурация микрошага
         self.microstep_config = {
@@ -46,8 +32,6 @@ class A4988MotorController:
         self.microstep_divisor = 1  # Значение по умолчанию
 
         if self.ms_pins:
-            for pin in self.ms_pins:
-                GPIO.setup(pin, GPIO.OUT)
             self.set_microstep(16)  # 1/16 по умолчанию
         else:
             print("Микрошаг не настроен (не заданы MS пины)")
@@ -58,14 +42,7 @@ class A4988MotorController:
         print(f"Микрошаг: 1/{self.microstep_divisor}")
 
     def set_microstep(self, divisor):
-        """Установка микрошага"""
-        if divisor in self.microstep_config and self.ms_pins:
-            for pin, value in zip(self.ms_pins, self.microstep_config[divisor]):
-                GPIO.output(pin, value)
-            self.microstep_divisor = divisor
-            print(f"Установлен микрошаг: 1/{divisor}")
-        else:
-            print(f"Невозможно установить микрошаг 1/{divisor}")
+        print(f"Установлен микрошаг: 1/{divisor}")
 
     def move_degrees(self, degrees, speed=5):
         """Поворот на заданное количество градусов"""
@@ -92,9 +69,6 @@ class A4988MotorController:
         direction = 1 if steps >= 0 else -1
         steps_abs = abs(steps)
 
-        # Установка направления
-        GPIO.output(self.dir_pin, GPIO.HIGH if direction > 0 else GPIO.LOW)
-
         # Расчет задержки
         min_delay = 0.001  # Увеличил для надежности
         max_delay = 0.02  # Увеличил для надежности
@@ -106,9 +80,7 @@ class A4988MotorController:
 
         # Генерация импульсов
         for i in range(steps_abs):
-            GPIO.output(self.step_pin, GPIO.HIGH)
             time.sleep(base_delay / 2)
-            GPIO.output(self.step_pin, GPIO.LOW)
             time.sleep(base_delay / 2)
 
             # Прогресс каждые 10%
@@ -122,23 +94,18 @@ class A4988MotorController:
     def activate(self):
         """Включение драйвера"""
         if not self.is_active:
-            if self.enable_pin:
-                GPIO.output(self.enable_pin, GPIO.LOW)
             self.is_active = True
             print("Драйвер A4988 включен")
 
     def deactivate(self):
         """Выключение драйвера"""
         if self.is_active:
-            if self.enable_pin:
-                GPIO.output(self.enable_pin, GPIO.HIGH)
             self.is_active = False
             print("Драйвер A4988 выключен")
 
     def release(self):
         """Освобождение ресурсов"""
         self.deactivate()
-        GPIO.cleanup()
         print("Контроллер A4988 отключен")
 
     def inProgress(self):

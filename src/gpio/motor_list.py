@@ -1,4 +1,4 @@
-from gpio.motor import Motor
+from src.gpio.motor import Motor
 
 MOTORS = {
     '28BYJ-48': Motor(

@@ -4,8 +4,8 @@ import OPi.GPIO as GPIO
 import time
 import threading
 
-from gpio.a4988_motor_controller import A4988MotorController
-from gpio.motor_list import MOTORS
+from src.gpio.a4988_motor_controller import A4988MotorController
+from src.gpio.motor_list import MOTORS
 
 # двигатель 1
 PIN_DIR_FIRST = "PD16"      # 18 зеленый

@@ -8,6 +8,8 @@ from src.location import Location
 from .utils import astropi_utils
 from .utils.tracking_mode import TrackingMode
 
+TEST_LOCATION = Location.fromLatLong(58, 0, 54, 56, 16, 28)
+
 
 class Server(ABC):
     buffer = 1024
@@ -24,7 +26,7 @@ class Server(ABC):
         self.server_socket = None
         self.logger = self._setup_logger()
         self._setup_server_socket()
-        self.location = Location.zero_north_east()
+        self.location = TEST_LOCATION  # Location.zero_north_east()
         self.has_gps = False
 
         self.goto_in_progress = False
@@ -33,6 +35,8 @@ class Server(ABC):
         self.tracking_mode = TrackingMode.EQ_NORTH
         self.last_ra = 0.0
         self.last_dec = 0.0
+        self.curr_ra = 0.0
+        self.curr_dec = 0.0
         self.last_update_time = time.time()
 
     def _setup_logger(self):

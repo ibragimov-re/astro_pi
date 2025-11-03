@@ -13,13 +13,13 @@ class MouthEqController:
         self.motorRa = motor_h_controller
         self.motorDec = motor_v_controller
 
-    def goto(self, ra, dec):
+    def goto(self, ra, dec, curr_ra, curr_dec):
         try:
             print(f"Инициализация поворота: {ra}°, {dec}°")
 
             # Создаем потоки для каждого двигателя
-            thread1 = threading.Thread(target=self.move_motor_sync, args=(self.motorRa, ra, MID_SPEED))
-            thread2 = threading.Thread(target=self.move_motor_sync, args=(self.motorDec, dec, MID_SPEED))
+            thread1 = threading.Thread(target=self.move_motor_sync, args=(self.motorRa, ra, curr_ra, MID_SPEED))
+            thread2 = threading.Thread(target=self.move_motor_sync, args=(self.motorDec, dec, curr_dec, MID_SPEED))
 
             # Запускаем потоки одновременно
             thread1.start()
@@ -37,7 +37,8 @@ class MouthEqController:
 
         return {self.curr_ra, self.curr_dec}
 
-    def move_motor_sync(self, motor, angle, speed):
+    def move_motor_sync(self, motor, angle, curr_angle, speed):
         """Функция для движения двигателя в отдельном потоке"""
         motor.move_degrees(angle, speed)
+        curr_angle = 0.0
     
