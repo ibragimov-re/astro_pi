@@ -1,10 +1,9 @@
 import datetime
-import logging
 import os
 
 from src.location import Coordinate, Location
-from .commands import Command
 from src.utils import astropi_utils
+from .commands import Command
 
 
 def to_byte_command(val: int):

@@ -3,8 +3,8 @@
 import OPi.GPIO as GPIO
 import time
 
-from src.gpio.motor_list import MOTORS
-from src.gpio.uln2003_motor_controller import ULN2003Controller
+from src.motor.motor_list import MOTORS
+from motor.controller.uln2003_motor_controller import ULN2003Controller
 
 PIN_IN4 = "PD16"
 PIN_IN3 = "PD15"

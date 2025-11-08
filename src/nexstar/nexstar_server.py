@@ -1,40 +1,17 @@
 import datetime
 
-from src.gpio.mouth_eq_controller import MouthEqController
-from src.mouth.mouth import Mouth
-from src.gpio.motor_list import MOTORS
-# from src.gpio.a4988_motor_controller import A4988MotorController
-from src.gpio.sim_motor_controller import SimMotorController
-from utils import astropi_utils
-
-from .nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
-    location_to_bytes, byte_to_datetime_utc
-from src.nexstar.commands import Command, Device, Model
+from src.mouth.controller.mouth_controller import MouthEqController
+from src.mouth.mouth_list import MOUTH_LIST
+from src.nexstar.commands import Command
 from src.server import Server
 from src.utils import astropi_utils
-from src.utils.tracking_mode import TrackingMode
-
+from .constants import Device
+from .nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
+    location_to_bytes, byte_to_datetime_utc
 
 # manual by commands https://s3.amazonaws.com/celestron-site-support-files/support_files/1154108406_nexstarcommprot.pdf
 
-CURRENT_MOTOR = MOTORS.get('NEMA17')
-
-# двигатель Ra
-PIN_DIR_RA = "PD16"      # 18 зеленый
-PIN_STEP_RA = "PD15"     # 16 синий
-PIN_ENABLE_RA = "PD18"   # 12 фиолетовый
-
-# двигатель Dec
-PIN_DIR_DEC = "PD22"     # 7 зеленый
-PIN_STEP_DEC = "PD25"    # 5 синий
-PIN_ENABLE_DEC = "PD26"  # 3 фиолетовый
-
-MOTOR_RA_CONTROLLER = SimMotorController(CURRENT_MOTOR, PIN_STEP_RA, PIN_DIR_RA, PIN_ENABLE_RA)
-MOTOR_DEC_CONTROLLER = SimMotorController(CURRENT_MOTOR, PIN_STEP_DEC, PIN_DIR_DEC, PIN_ENABLE_DEC)
-
-CGX_MOUTH = Mouth(Model.CGE, True, TrackingMode.EQ_NORTH, "Celestron Montatura CGX GoTo")
-SE_MOUTH = Mouth(Model.SE_4_5, True, TrackingMode.ALT_AZ, "Celestron SE 5")
-DEFAULT_MOUTH = SE_MOUTH
+DEFAULT_MOUTH = MOUTH_LIST["AstroPi"]
 
 POLAR_RA_DEC = [38.044259548187256, 89.259]  # Polar Star RA/DEC
 ZERO_RA_DEC = [0.0, 0.0]
@@ -43,21 +20,22 @@ DEFAULT_TARGET = POLAR_RA_DEC
 APP_VERSION = [4, 10]
 DEVICE_VERSION = [1, 0]
 
-BUFFER = 1000  # in documentation, the longest command is 18 bytes
+NEXSTAR_BUFFER = 18  # in documentation, the longest command is 18 bytes
 
 
 class ServerNexStar(Server):
-    buffer = 18
-    major = APP_VERSION[0]
-    minor = APP_VERSION[1]
-    last_ra = DEFAULT_TARGET[0]
-    last_dec = DEFAULT_TARGET[1]
 
-    def __init__(self, host='0.0.0.0', port=4030):
-        super().__init__(host, port, Server.name + ' [NexStar]')
-        self.mouth = MouthEqController(DEFAULT_MOUTH, MOTOR_RA_CONTROLLER, MOTOR_DEC_CONTROLLER)
+    def __init__(self, host='0.0.0.0', port=4030, motor_type='real'):
+        super().__init__(host, port, motor_type, Server.name + ' [NexStar]')
+
+        self.mouth = MouthEqController(DEFAULT_MOUTH, motor_type)
+
         self.last_ra = DEFAULT_TARGET[0]
         self.last_dec = DEFAULT_TARGET[1]
+
+        self.buffer = NEXSTAR_BUFFER
+        self.major = APP_VERSION[0]
+        self.minor = APP_VERSION[1]
 
     def get_buffer(self):
         return self.buffer
@@ -162,7 +140,7 @@ class ServerNexStar(Server):
         return to_byte_command(self.mouth.mouth.model.value)
 
     def get_tracking_mode(self):
-        self.logger.info(f"Режим отслеживания движения: {self.mouth.mouth.tracking_mode.value})")
+        self.logger.info(f"Режим отслеживания движения: {self.mouth.mouth.tracking_mode}")
         return to_byte_command(self.mouth.mouth.tracking_mode.value)
 
     def has_gps(self):
@@ -200,16 +178,16 @@ class ServerNexStar(Server):
 
     def is_goto_in_progress(self):
         if self.goto_in_progress:
-            self.logger.info(f"Монтировка в процессе наведения GOTO)")
+            self.logger.info(f"Монтировка в процессе наведения GOTO")
         else:
-            self.logger.info(f"Монтировка в покое)")
+            self.logger.info(f"Монтировка в покое")
         return bytes([self.goto_in_progress]) + Command.END
 
     def is_alignment_in_prog(self):
         if self.alignment_completed:
-            self.logger.info(f"Монтировка выравнена)")
+            self.logger.info(f"Монтировка выравнена")
         else:
-            self.logger.info(f"Монтировка НЕ выравнена)")
+            self.logger.info(f"Монтировка НЕ выравнена")
         return bytes([self.alignment_completed]) + Command.END
 
     # Собираем байтовую строку кокординат
@@ -254,10 +232,9 @@ class ServerNexStar(Server):
 
         self.last_ra = astropi_utils.hex_to_degrees(ra_hex, precise)
         self.last_dec = astropi_utils.hex_to_degrees(dec_hex, precise)
-        self.curr_ra = self.last_ra
-        self.curr_dec = self.last_dec
 
-        self.logger.info(f"Синхронизация по координатам: П.В (Ra):{self.last_ra} ({ra_hex}), Скл (Dec): {self.last_dec} ({dec_hex})")
+        self.logger.info(
+            f"Синхронизация по координатам: П.В (Ra):{self.last_ra} ({ra_hex}), Скл (Dec): {self.last_dec} ({dec_hex})")
 
         self.goto_in_progress = False
 
@@ -271,25 +248,29 @@ class ServerNexStar(Server):
         self.logger.info(f"Старт команды GOTO (точный режим: {precise})")
 
         self.goto_in_progress = True
+
         ra_dec = strip_command_letter(data)
         ra_dec_arr = ra_dec.split(',')
 
-        ra_hex = ra_dec_arr[0]
-        dec_hex = ra_dec_arr[1]
-        ra_degrees = astropi_utils.hex_to_degrees(ra_hex, precise)
-        dec_degrees = astropi_utils.hex_to_degrees(dec_hex, precise)
+        ra_degrees = astropi_utils.hex_to_degrees(ra_dec_arr[0], precise)
+        dec_degrees = astropi_utils.hex_to_degrees(ra_dec_arr[1], precise)
+
+        ra_diff = ra_degrees - self.last_ra
+        dec_diff = dec_degrees - self.last_dec
 
         self.logger.info(f"Наведение")
-        cur_ra_dec = self.mouth.goto(ra_degrees, dec_degrees, self.curr_ra, self.curr_dec)
+        cur_ra_dec = self.mouth.goto(ra_diff, dec_diff)
 
         self.curr_ra = 0.0
         self.curr_dec = 0.0
 
-        self.logger.info(f"Текущие координаты: {cur_ra_dec}")
+        # self.logger.info(f"Текущие координаты: {cur_ra_dec}") # TODO: cur_ra_dec - нужно вернуть реальные координаты поворота
 
         self.last_ra = ra_degrees
         self.last_dec = dec_degrees
 
         self.logger.info(f"Наведение по координатам: П.В (Ra):{self.last_ra}, Скл (Dec): {self.last_dec}")
+
+        self.goto_in_progress = False
 
         return Command.END

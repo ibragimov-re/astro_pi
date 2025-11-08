@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 -m src.main -p nexstar
+python3 -m src.main -r nexstar -t real

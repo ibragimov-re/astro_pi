@@ -1,12 +1,12 @@
-import logging
 import socket
 import threading
 import time
 from abc import ABC, abstractmethod
 
 from src.location import Location
-from .utils import astropi_utils
-from .utils.tracking_mode import TrackingMode
+from src.mouth.tracking_mode import TrackingMode
+from src.utils.app_logger import AppLogger
+from src.utils import astropi_utils
 
 TEST_LOCATION = Location.fromLatLong(58, 0, 54, 56, 16, 28)
 
@@ -18,13 +18,13 @@ class Server(ABC):
 
     LOG_RAW_COMMANDS = False
 
-    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi'):
+    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi', motor_type='real'):
         self.host = host
         self.port = port
         self.name = name
         self.running = False
         self.server_socket = None
-        self.logger = self._setup_logger()
+        self.logger = AppLogger.info(self.name)
         self._setup_server_socket()
         self.location = TEST_LOCATION  # Location.zero_north_east()
         self.has_gps = False
@@ -38,20 +38,7 @@ class Server(ABC):
         self.curr_ra = 0.0
         self.curr_dec = 0.0
         self.last_update_time = time.time()
-
-    def _setup_logger(self):
-        logger = logging.getLogger(self.name)
-        logger.setLevel(logging.INFO)
-
-        formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s - %(message)s'
-        )
-
-        ch = logging.StreamHandler()
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-
-        return logger
+        self.motor_type = motor_type
 
     def _setup_server_socket(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -141,7 +128,7 @@ class Server(ABC):
         self.running = False
         if self.server_socket:
             self.server_socket.close()
-        self.logger.info(f"Сервер {self.name} остановлен")
+        self.logger.warning(f"Сервер {self.name} остановлен")
 
     def __enter__(self):
         self.start()
