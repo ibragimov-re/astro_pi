@@ -4,8 +4,8 @@ from src.server import Server
 class ServerLX200(Server):
     buffer = 8
 
-    def __init__(self, host='0.0.0.0', port=4030):
-        super().__init__(host, port, Server.name + ' [LX200]')
+    def __init__(self, host='0.0.0.0', port=4030, motor_type='real'):
+        super().__init__(host, port, motor_type, Server.name + ' [LX200]')
 
     def get_buffer(self):
         return self.buffer

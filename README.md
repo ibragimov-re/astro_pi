@@ -27,11 +27,11 @@ ssh root@orangepi3-lts "mkdir -p /home/astropi";          # create folder
 ```
 
 ```shell
-scp -rp ./src ./main.py ./start.sh root@orangepi3-lts:/home/astropi/ # copy src and main.py to device
+scp -rp ./src ./start.sh root@orangepi3-lts:/home/astropi/ # copy src and start.sh to device
 ```
 или выполнить скрипт `pullToOrangePi.sh`
 
-2. Запустить сервер через `main.py` с указанием протокола (по-умолчанию `lx200`), например: `python3 main.py -p nexstar`
+2. Запустить сервер через `main.py` с указанием протокола (по-умолчанию `lx200`), например: `python3 -m src.main -p nexstar`
  
 ### Как подключится?
 

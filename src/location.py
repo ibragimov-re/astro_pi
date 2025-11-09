@@ -28,3 +28,9 @@ class Location:
     @staticmethod
     def zero_north_east():
         return Location(Coordinate.zero(), Coordinate.zero(), 0, 0)
+
+    @staticmethod
+    def fromLatLong(lat_deg=0, lat_min=0, lat_sec=0, long_deg=0, long_min=0, long_sec=0, north_south=0, east_west=0):
+        lat = Coordinate(lat_deg, lat_min, lat_sec)
+        long = Coordinate(long_deg, long_min, long_sec)
+        return Location(lat, long, north_south, east_west)

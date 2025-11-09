@@ -1,10 +1,9 @@
 import datetime
-import logging
 import os
 
 from src.location import Coordinate, Location
-from .commands import Command
 from src.utils import astropi_utils
+from .commands import Command
 
 
 def to_byte_command(val: int):
@@ -74,6 +73,7 @@ def time_to_bytes(hour, minute, second, month, day, year, is_dst, tz_offset):
 
 
 def bytes_to_location(data: bytes):
+    # 1st byte is command
     lat_deg = data[1]  # A
     lat_min = data[2]  # B
     lat_sec = data[3]  # C
@@ -110,6 +110,6 @@ def location_to_bytes(location: Location):
         location.north_south,
         long.deg,
         long.min,
-        long.sec
-        # location.east_west
+        long.sec,
+        location.east_west
     ])
