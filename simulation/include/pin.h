@@ -13,7 +13,7 @@ enum class PinType {
 };
 
 // Перечисление режимов для GPIO и SPECIAL пинов 
-enum class PinMode {
+enum class GpioMode {
 	INPUT,   // Режим чтения
 	OUTPUT,  // Режим записи
 	ALT,     // Режим альтернативной функции (I2C, UART, SPI, PWM). Только для SPECIAL пинов
@@ -78,7 +78,7 @@ public:
 	int getGpioNumber() const;
 
 	// Получить текущий режим работы пина
-	PinMode getMode() const;
+	GpioMode getMode() const;
 
 	// Получить текущее состояние пина
 	virtual GpioState getState() const;
@@ -87,7 +87,7 @@ public:
 	PinType getType() const;
 
 	// Установить режим работы пина (только INPUT или OUTPUT)
-	virtual void setMode(PinMode newMode);
+	virtual void setMode(GpioMode newMode);
 
 	// Установить состояние пина (LOW или HIGH), только если в режиме OUTPUT
 	void setState(GpioState newState);
@@ -95,7 +95,7 @@ public:
 protected:
 	std::string socName;  // Имя контакта на сокете (PD26, PL10, PH4 и т.п.)
 	int gpioNumber;       // Номер GPIO
-	PinMode mode;         // Режим пина
+	GpioMode mode;         // Режим пина
 	GpioState state;      // Состояние пина
 };
 
@@ -117,7 +117,7 @@ public:
 	std::string getAltFunction() const;
 
 	// Установить режим работы пина
-	virtual void setMode(PinMode newMode);
+	virtual void setMode(GpioMode newMode);
 
 private:
 	std::string altFunction; // ALT-функция пина
