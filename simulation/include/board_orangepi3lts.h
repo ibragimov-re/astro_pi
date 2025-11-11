@@ -10,15 +10,6 @@ class OrangePi3LTS {
 public:
 	OrangePi3LTS(); // Конструктор платы
 
-	// Запрещаем копирование, т.к. вектор содержит unique_ptr		//-
-	OrangePi3LTS(const OrangePi3LTS&) = delete;						//-
-	OrangePi3LTS& operator=(const OrangePi3LTS&) = delete;			//-
-																	//-
-	// Разрешаем перемещение										//-
-	OrangePi3LTS(OrangePi3LTS&&) noexcept = default;				//-
-	OrangePi3LTS& operator=(OrangePi3LTS&&) noexcept = default;		//-
-																	//-
-	
 	// Найти пин по физическому номеру
 	Pin& getPinByBoardNumber(int boardNumber) const;
 

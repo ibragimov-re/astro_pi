@@ -12,9 +12,9 @@ namespace gpioTest {
 
         consoleUtils::printMessage(L"[TEST] Установка OUTPUT режима у GPIO пинов\n");
         GpioPin& pin12 = static_cast<GpioPin&>(board.getPinByBoardNumber(12));
-        pin12.setMode(PinMode::OUTPUT);
+        pin12.setMode(GpioMode::OUTPUT);
         GpioPin& pin15 = static_cast<GpioPin&>(board.getPinBySocName("PL10"));
-        pin15.setMode(PinMode::OUTPUT);
+        pin15.setMode(GpioMode::OUTPUT);
 
 
         consoleUtils::printMessage(L"[TEST] Замер скорости переключения состояния GPIO пина:\n");
@@ -32,16 +32,16 @@ namespace gpioTest {
 
         consoleUtils::printMessage(L"[TEST] Установка INPUT режима у GPIO пина\n");
         GpioPin& pin11 = static_cast<GpioPin&>(board.getPinByBoardNumber(11));
-        pin11.setMode(PinMode::INPUT);
+        pin11.setMode(GpioMode::INPUT);
 
 
         consoleUtils::printMessage(L"[TEST] Установка ALT режима у SPECIAL пинов\n");
         GpioPin& pin19 = static_cast<SpecialPin&>(board.getPinByBoardNumber(19));
-        pin19.setMode(PinMode::ALT);
+        pin19.setMode(GpioMode::ALT);
         GpioPin& pin21 = static_cast<SpecialPin&>(board.getPinByBoardNumber(21));
-        pin21.setMode(PinMode::ALT);
+        pin21.setMode(GpioMode::ALT);
         GpioPin& pin23 = static_cast<SpecialPin&>(board.getPinByBoardNumber(23));
-        pin23.setMode(PinMode::ALT);
+        pin23.setMode(GpioMode::ALT);
 
 
         consoleUtils::printMessage(L"[TEST] Переключение состояния GPIO пинов с разной скоростью\n");
@@ -62,15 +62,15 @@ namespace gpioTest {
 
 
         consoleUtils::printMessage(L"[TEST] Выключение GPIO пинов\n");
-        pin12.setMode(PinMode::OFF);
-        pin15.setMode(PinMode::OFF);
-        pin11.setMode(PinMode::OFF);
+        pin12.setMode(GpioMode::OFF);
+        pin15.setMode(GpioMode::OFF);
+        pin11.setMode(GpioMode::OFF);
 
 
         consoleUtils::printMessage(L"[TEST] Переключение SPECIAL пинов в OUTPUT режим\n");
-        pin19.setMode(PinMode::OUTPUT);
-        pin21.setMode(PinMode::OUTPUT);
-        pin23.setMode(PinMode::OUTPUT);
+        pin19.setMode(GpioMode::OUTPUT);
+        pin21.setMode(GpioMode::OUTPUT);
+        pin23.setMode(GpioMode::OUTPUT);
 
 
         consoleUtils::printMessage(L"[TEST] Переключение состояния SPECIAL пинов с максимальной скоростью\n");
@@ -85,9 +85,9 @@ namespace gpioTest {
 
 
         consoleUtils::printMessage(L"[TEST] Выключение SPECIAL пинов\n");
-        pin19.setMode(PinMode::OFF);
-        pin21.setMode(PinMode::OFF);
-        pin23.setMode(PinMode::OFF);
+        pin19.setMode(GpioMode::OFF);
+        pin21.setMode(GpioMode::OFF);
+        pin23.setMode(GpioMode::OFF);
 
 
         consoleUtils::printMessage(L"[TEST] Тестовая управляющая программа завершена\n");

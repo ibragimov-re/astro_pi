@@ -27,18 +27,18 @@ GpioPin::GpioPin(int boardNumber_, const std::string& name_, const std::string& 
 	socName(socName_),
 	gpioNumber(gpioNumber_),
 	// По умолчанию пин будет инициализироваться с режимом OFF и состоянием LOW
-	mode(PinMode::OFF),
+	mode(GpioMode::OFF),
 	state(GpioState::LOW) {
 }
 
 std::string GpioPin::getSocName() const { return socName; }
 int GpioPin::getGpioNumber() const { return gpioNumber; }
-PinMode GpioPin::getMode() const { return mode; }
+GpioMode GpioPin::getMode() const { return mode; }
 GpioState GpioPin::getState() const { return state; }
 PinType GpioPin::getType() const { return PinType::GPIO; }
 
-void GpioPin::setMode(PinMode newMode) {
-	if (newMode == PinMode::ALT) {
+void GpioPin::setMode(GpioMode newMode) {
+	if (newMode == GpioMode::ALT) {
 		throw std::logic_error("ALT mode is not supported on plain GPIO pins");
 	}
 	mode = newMode;
@@ -46,7 +46,7 @@ void GpioPin::setMode(PinMode newMode) {
 }
 
 void GpioPin::setState(GpioState newState) {
-	if (mode != PinMode::OUTPUT) {
+	if (mode != GpioMode::OUTPUT) {
 		throw std::logic_error("Cannot write the state when pin is not in OUTPUT mode");
 	}
 	else {
@@ -64,7 +64,7 @@ SpecialPin::SpecialPin(int boardNumber_, const std::string& name_,
 }
 
 GpioState SpecialPin::getState() const {
-	if (mode == PinMode::ALT) {
+	if (mode == GpioMode::ALT) {
 		throw std::logic_error("Pin state unavailable in ALT mode");
 	}
 	else {
@@ -75,7 +75,7 @@ GpioState SpecialPin::getState() const {
 PinType SpecialPin::getType() const { return PinType::SPECIAL; }
 std::string SpecialPin::getAltFunction() const { return altFunction; }
 
-void SpecialPin::setMode(PinMode newMode) {
+void SpecialPin::setMode(GpioMode newMode) {
 	mode = newMode;
 	notifyChangeStateOrMode();
 }
