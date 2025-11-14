@@ -95,9 +95,9 @@ void OrangePi3LTS::printBoardPins() const {
                 GpioPin& gPin = static_cast<GpioPin&>(pin);
                 gpioNum = std::to_string(gPin.getGpioNumber());
                 switch (gPin.getMode()) {
-                    case PinMode::OFF:    mode = "OFF"; break;
-                    case PinMode::INPUT:  mode = "IN";  break;
-                    case PinMode::OUTPUT: mode = "OUT"; break;
+                    case GpioMode::OFF:    mode = "OFF"; break;
+                    case GpioMode::INPUT:  mode = "IN";  break;
+                    case GpioMode::OUTPUT: mode = "OUT"; break;
                     default: mode = ""; break;
                 }
                 val = (gPin.getState() == GpioState::HIGH ? "1" : "0");
@@ -107,13 +107,13 @@ void OrangePi3LTS::printBoardPins() const {
                 SpecialPin& sPin = static_cast<SpecialPin&>(pin);
                 gpioNum = std::to_string(sPin.getGpioNumber());
                 switch (sPin.getMode()) {
-                    case PinMode::OFF:    mode = "OFF"; break;
-                    case PinMode::INPUT:  mode = "IN";  break;
-                    case PinMode::OUTPUT: mode = "OUT"; break;
-                    case PinMode::ALT:    mode = "ALT"; break;
+                    case GpioMode::OFF:    mode = "OFF"; break;
+                    case GpioMode::INPUT:  mode = "IN";  break;
+                    case GpioMode::OUTPUT: mode = "OUT"; break;
+                    case GpioMode::ALT:    mode = "ALT"; break;
                     default: mode = ""; break;
                 }
-                val = (sPin.getMode() == PinMode::ALT ? "-" : (sPin.getState() == GpioState::HIGH ? "1" : "0"));
+                val = (sPin.getMode() == GpioMode::ALT ? "-" : (sPin.getState() == GpioState::HIGH ? "1" : "0"));
                 soc = (sPin.getSocName());
             }
 

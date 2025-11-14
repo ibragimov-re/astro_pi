@@ -88,11 +88,11 @@ void KsBinder::setGpioAndSpecialPinBodyColor(const GpioPin* pin) {
     int num = pin->getBoardNumber();
 
     switch (pin->getMode()) {
-    case PinMode::OFF:
+    case GpioMode::OFF:
         setPinBodyColor(pin, 70, 70, 70); // Серый
         break;
 
-    case PinMode::OUTPUT: {
+    case GpioMode::OUTPUT: {
         auto state = pin->getState();
         if (state == GpioState::LOW)
             setPinBodyColor(pin, 255, 0, 0); // Красный
@@ -101,11 +101,11 @@ void KsBinder::setGpioAndSpecialPinBodyColor(const GpioPin* pin) {
         break;
     }
 
-    case PinMode::INPUT:
+    case GpioMode::INPUT:
         setPinBodyColor(pin, 0, 255, 255); // Голубой
         break;
 
-    case PinMode::ALT:
+    case GpioMode::ALT:
         setPinBodyColor(pin, 200, 0, 255); // Фиолетовый
         break;
     }
