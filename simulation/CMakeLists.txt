@@ -9,7 +9,11 @@ set(KOMPAS_SDK_PATH "$ENV{KOMPAS_SDK}")
 set(KOMPAS_TLBS_PATH "${KOMPAS_SDK_PATH}lib")
 message(STATUS "Kompas TLBs path: ${KOMPAS_TLBS_PATH}")
 
-set(SOURCES
+# Добавить pybind11 как подмодуль
+add_subdirectory(extern/pybind11)
+
+# Создать Python модуль
+pybind11_add_module(kopis
 	"src/main.cpp"
 	"src/board_orangepi3lts.cpp"
 	"src/pin.cpp"
@@ -18,26 +22,15 @@ set(SOURCES
 	"tests/gpio_test.cpp"
 )
 
-set(HEADERS
-	"include/board_orangepi3lts.h"
-	"include/pin.h"
-	"include/utils.h"
-	"include/ks_service.h"
-	"include/ks_binder.h"
-	"tests/gpio_test.h"
-)
-
-add_executable(Kopis ${SOURCES} ${HEADERS})
-
-target_include_directories(Kopis PRIVATE
+target_include_directories(kopis PRIVATE
 	"include"
 	"tests"
 	${KOMPAS_TLBS_PATH} # Для импорта .tlb файлов Kompas API и геренерации из них .tlh, .tli файлов
 )
 
-target_precompile_headers(Kopis PRIVATE include/pch.h)
+target_precompile_headers(kopis PRIVATE include/pch.h)
 
-target_compile_definitions(Kopis PRIVATE UNICODE _UNICODE)
+target_compile_definitions(kopis PRIVATE UNICODE _UNICODE)
 
 
 # ========================================================
@@ -46,10 +39,10 @@ target_compile_definitions(Kopis PRIVATE UNICODE _UNICODE)
 # ========================================================
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "Root dir path: ${CMAKE_CURRENT_SOURCE_DIR}")
-set(BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/Kopis.dir")
+set(BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/kopis.dir")
 message(STATUS "Build dir path: ${BUILD_DIR}")
 
-add_custom_command(TARGET Kopis POST_BUILD
+add_custom_command(TARGET kopis POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E echo "Copy generated .tlh/.tli files to project root"
 
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BUILD_DIR}/kAPI7.tlh" "${ROOT_DIR}/"
