@@ -1,8 +1,9 @@
 #include "pch.h"
-#include <stdexcept>
-#include <vector>
 #include "utils.h"
 #include "ks_service.h"
+#include <stdexcept>
+#include <vector>
+#include <comutil.h>
 
 
 KompasAPI7::IApplicationPtr ksGetApp() {
@@ -112,7 +113,7 @@ void ksSetBodyColor(KompasAPI7::IBody7Ptr body, int r, int g, int b) {
 }
 
 
-void ksUpdateBodiesColorInDocument(KompasAPI7::IKompasDocument3DPtr doc3d) {
+void ksUpdateAllBodiesColorInAssembly(KompasAPI7::IKompasDocument3DPtr doc3d) {
     // Для мгновенного обновления цвета тел в документе со сборкой используется способ обновления через
     // переключение отображения резьбы, тогда Компас-3D сразу отрисует новый заданный цвет для тел
     bool isThreadsHidden = doc3d->HideAllThreads;
@@ -127,7 +128,7 @@ void ksUpdateBodiesColorInDocument(KompasAPI7::IKompasDocument3DPtr doc3d) {
 }
 
 
-bool ksGetIsDocAssembly(KompasAPI7::IKompasDocument3DPtr doc3d) {
+bool ksIsDocAssembly(KompasAPI7::IKompasDocument3DPtr doc3d) {
     KompasAPI7::IKompasDocumentPtr doc = doc3d;
     KompasAPI7::DocumentTypeEnum docType;
 
@@ -139,4 +140,27 @@ bool ksGetIsDocAssembly(KompasAPI7::IKompasDocument3DPtr doc3d) {
         return true;
     }
     else return false;
+}
+
+
+void ksSetVariableExpressionInPart(KompasAPI7::IPart7Ptr part, std::wstring variableName, std::wstring expression) {
+    KompasAPI7::IFeature7Ptr feature = part;
+
+    _variant_t varName(variableName.c_str());
+    VARIANT_BOOL isExternal = VARIANT_FALSE; // Не внешняя переменная
+    VARIANT_BOOL isInSource = VARIANT_TRUE; // Переменная из источника
+
+    KompasAPI7::IVariable7Ptr var = feature->GetVariable(isExternal, isInSource, varName);
+
+    if (!var) {
+        consoleUtils::printError(L"Failed to find variable in Kompas-3D part: " + variableName + L'\n');
+        throw std::runtime_error("[KS-SERVICE] Variable not found");
+    }
+
+    var->Expression = strUtils::wstrToBstr(expression);
+}
+
+
+void ksRebuildDocument(KompasAPI7::IKompasDocument3DPtr doc3d) {
+    doc3d->RebuildDocument();
 }

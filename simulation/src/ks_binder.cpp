@@ -2,8 +2,8 @@
 #include "pin.h"
 
 
-KsBinder::KsBinder(OrangePi3LTS& board_)
-	: board(board_)
+KsBinder::KsBinder(Assembly& assembly_)
+	: assembly(assembly_), board(assembly.getBoard())
 {
     try {
         // Инициализация COM
@@ -35,9 +35,12 @@ KsBinder::KsBinder(OrangePi3LTS& board_)
                 }
             }
         }
+
+        isDocAssembly = ksIsDocAssembly(ksDoc3D);
+
         setupAllPins();
 
-        isDocAssembly = ksGetIsDocAssembly(ksDoc3D);
+        setupAllMotors();
     }
     catch (const std::exception& ex) {
         throw std::runtime_error(ex.what());
@@ -54,16 +57,24 @@ KsBinder::~KsBinder() {
 
 void KsBinder::setupAllPins() {
     for (auto& [pin, body] : pinBodiesMap) {
-        setPinBodyColor(pin, body);
+        setPinBodyColorByModeAndState(pin, body);
 
-        pin->setOnChangeCallback([this, pin, body](const Pin* changedPin) {
-            this->setPinBodyColor(pin, body);
+        // Установка лямбда-функции, которая будет выполняться при обновлении режима или состояния пина
+        pin->setOnChangeCallback([this, &pin, body](const Pin* changedPin) {
+            this->setPinBodyColorByModeAndState(pin, body);
+            ksUpdateAllBodiesColorInAssembly(ksDoc3D);
             });
+    }
+
+    // Обновление цвета у всех тел после задания цветов для всех пинов
+    // это позволяет ускорить инициализацию платы в сборке
+    if (isDocAssembly) {
+        ksUpdateAllBodiesColorInAssembly(ksDoc3D);
     }
 }
 
 
-void KsBinder::setPinBodyColor(const Pin* pin, KompasAPI7::IBody7Ptr) {
+void KsBinder::setPinBodyColorByModeAndState(const Pin* pin, KompasAPI7::IBody7Ptr) {
     switch (pin->getType()) {
     case PinType::SPECIAL:
     case PinType::GPIO: {
@@ -116,6 +127,12 @@ void KsBinder::clearAllPins() {
     for (const auto& [pin, body] : pinBodiesMap) {
         setPinBodyColor(pin, 200, 200, 200); // Белый
     }
+
+    // Обновление цвета у всех тел после задания цветов для всех пинов
+    // это позволяет ускорить очистку платы в сборке
+    if (isDocAssembly) {
+        ksUpdateAllBodiesColorInAssembly(ksDoc3D);
+    }
 }
 
 
@@ -124,10 +141,26 @@ void KsBinder::setPinBodyColor(const Pin* pin, int r, int g, int b) {
     if (it != pinBodiesMap.end()) {
         auto body = it->second;
         ksSetBodyColor(body, r, g, b);
+    }
+}
 
-        // Если сборка, то принудительно обновить цвет всех тел для корректного отображения цвета
-        if (isDocAssembly) {
-            ksUpdateBodiesColorInDocument(ksDoc3D);
-        }
+
+void KsBinder::setupAllMotors() {
+    for (auto& motorRef : assembly.getAllMotors()) {
+        Motor& motor = motorRef.get();
+        std::wstring motorName = motor.getName();
+
+        KompasAPI7::IFeature7Ptr motorFeature = ksGetFeatureByNameInDoc3D(ksDoc3D, motorName);
+        KompasAPI7::IPart7Ptr motorPart = motorFeature;
+
+        motorAssembliesMap[&motor] = motorPart;
+
+        // Установка лямбда-функции, которая будет выполняться при обновлении угла вала мотора
+        motor.setOnChangeCallback([this, &motor, motorPart](const Motor* changedPin) {
+            ksSetVariableExpressionInPart(motorPart, L"ShaftAngle", std::to_wstring(motor.getShaftAngle()));
+            ksRebuildDocument(ksDoc3D);
+            });
+
+        consoleUtils::printMessage(L"[OK] Find motor assembly: " + motorName + L"\n");
     }
 }
