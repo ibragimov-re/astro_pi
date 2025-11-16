@@ -11,16 +11,20 @@ message(STATUS "Kompas TLBs path: ${KOMPAS_TLBS_PATH}")
 
 set(SOURCES
 	"src/main.cpp"
+	"src/assembly.cpp"
 	"src/board_orangepi3lts.cpp"
 	"src/pin.cpp"
+	"src/motor.cpp"
 	"src/ks_service.cpp"
 	"src/ks_binder.cpp"
 	"tests/gpio_test.cpp"
 )
 
 set(HEADERS
+	"include/assembly.h"
 	"include/board_orangepi3lts.h"
 	"include/pin.h"
+	"include/motor.h"
 	"include/utils.h"
 	"include/ks_service.h"
 	"include/ks_binder.h"

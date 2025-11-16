@@ -1,14 +1,16 @@
 #include "gpio_test.h"
 #include "utils.h"
+#include "motor.h"
 #include <Windows.h> // Для Sleep
 #include <chrono>
 
 
-namespace gpioTest {
+namespace tests {
     
-    void RunGpioProgram(OrangePi3LTS& board) {
-        consoleUtils::printMessage(L"[TEST] Запущена тестовая управляющая программа\n");
+    void RunGpioPinsTest(Assembly& assembly) {
+        consoleUtils::printMessage(L"[TEST] Запущена тестовая управляющая программа для GPIO пинов\n");
 
+        const OrangePi3LTS& board = assembly.getBoard();
 
         consoleUtils::printMessage(L"[TEST] Установка OUTPUT режима у GPIO пинов\n");
         GpioPin& pin12 = static_cast<GpioPin&>(board.getPinByBoardNumber(12));
@@ -89,6 +91,55 @@ namespace gpioTest {
         pin21.setMode(PinMode::OFF);
         pin23.setMode(PinMode::OFF);
 
+
+        consoleUtils::printMessage(L"[TEST] Тестовая управляющая программа завершена\n");
+    }
+
+
+    void RunMotorsTest(Assembly& assembly) {
+        consoleUtils::printMessage(L"[TEST] Запущена тестовая управляющая программа для моторов\n");
+
+        Motor& motorHorizontal = assembly.getMotor(L"#Nema17HS8401_Horizontal");
+        Motor& motorVertical = assembly.getMotor(L"#Nema17HS8401_Vertical");
+
+
+        consoleUtils::printMessage(L"[TEST] Наведение на полярную звезду (Alt+58, скорость 1)\n");
+        motorVertical.rotateShaftAngle(58, 1);
+        Sleep(3000);
+        consoleUtils::printMessage(L"[TEST] Наведение в исходное состояние (Alt-58, скорость 4)\n");
+        motorVertical.rotateShaftAngle(-58, 4);
+        Sleep(2000);
+
+        
+        consoleUtils::printMessage(L"[TEST] Вращение вертикального мотора (Угол -30, скорость 3)\n");
+        motorVertical.rotateShaftAngle(-30, 3);
+        Sleep(2000);
+        consoleUtils::printMessage(L"[TEST] Вращение вертикального мотора (Угол +50, скорость 4)\n");
+        motorVertical.rotateShaftAngle(50, 4);
+        Sleep(2000);
+
+
+        consoleUtils::printMessage(L"[TEST] Вращение горизонтального мотора (Угол +350, скорость 6)\n");
+        motorHorizontal.rotateShaftAngle(350, 6);
+        Sleep(2000);
+        consoleUtils::printMessage(L"[TEST] Вращение горизонтального мотора (Угол +50, скорость 3)\n");
+        motorHorizontal.rotateShaftAngle(50, 3);
+        Sleep(2000);
+
+
+        consoleUtils::printMessage(L"[TEST] Поочередное вращение двигателей на разных скоростях\n");
+        motorHorizontal.rotateShaftAngle(-40, 2);
+        motorVertical.rotateShaftAngle(10, 2);
+        motorHorizontal.rotateShaftAngle(-200, 5);
+        motorVertical.rotateShaftAngle(-20, 3);
+        motorHorizontal.rotateShaftAngle(20, 1);
+        motorVertical.rotateShaftAngle(60, 4);
+
+
+        Sleep(4000);
+        consoleUtils::printMessage(L"Выставление моторов в изначальное положение\n");
+        motorHorizontal.setShaftAngle(0);
+        motorVertical.setShaftAngle(0);
 
         consoleUtils::printMessage(L"[TEST] Тестовая управляющая программа завершена\n");
     }

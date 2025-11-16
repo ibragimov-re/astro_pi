@@ -21,8 +21,14 @@ std::vector<KompasAPI7::IBody7Ptr> ksGetFeatureBodies(KompasAPI7::IFeature7Ptr f
 // Установить цвет тела
 void ksSetBodyColor(KompasAPI7::IBody7Ptr body, int r, int g, int b);
 
-// Обновить цвет тел в сборке
-void ksUpdateBodiesColorInDocument(KompasAPI7::IKompasDocument3DPtr doc3d);
+// Обновить цвет тела в сборке
+void ksUpdateAllBodiesColorInAssembly(KompasAPI7::IKompasDocument3DPtr doc3d);
 
 // Является ли документ сборкой
-bool ksGetIsDocAssembly(KompasAPI7::IKompasDocument3DPtr doc3d);
+bool ksIsDocAssembly(KompasAPI7::IKompasDocument3DPtr doc3d);
+
+// Установить переменную по имени
+void ksSetVariableExpressionInPart(KompasAPI7::IPart7Ptr part, std::wstring variableName, std::wstring expression);
+
+// Перестроить документ
+void ksRebuildDocument(KompasAPI7::IKompasDocument3DPtr doc3d);

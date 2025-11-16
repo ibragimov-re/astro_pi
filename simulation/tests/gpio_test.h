@@ -1,7 +1,10 @@
 #pragma once
-#include "board_orangepi3lts.h"
+#include "assembly.h"
 
-namespace gpioTest {
+namespace tests {
     // Запустить тестовую программу с изменением GPIO пинов
-    void RunGpioProgram(OrangePi3LTS& board);
+    void RunGpioPinsTest(Assembly& assembly);
+
+    // Запустить тестовую программу с моторами
+    void RunMotorsTest(Assembly& assembly);
 }
