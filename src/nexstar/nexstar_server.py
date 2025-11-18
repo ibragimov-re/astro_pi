@@ -250,7 +250,6 @@ class ServerNexStar(Server):
         return self.goto_ra_dec(data, True)
 
     def goto_ra_dec(self, data, precise: bool = False):
-        # Сюда команда не приходит=(
         self.logger.info(f"Старт команды GOTO (точный режим: {precise})")
 
         self.goto_in_progress = True
