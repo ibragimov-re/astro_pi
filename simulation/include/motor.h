@@ -22,6 +22,9 @@ public:
 	// Получить угол поворота вала
 	double getShaftAngle() const;
 
+	// Сбросить угол поворота вала до нуля
+	void resetShaftAngle();
+
 	// Функция обратного вызова (callback), вызываемая при изменении угла вала мотора
 	using AngleChangeCallback = std::function<void(const Motor*)>;
 
