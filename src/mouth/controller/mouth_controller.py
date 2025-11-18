@@ -1,60 +1,47 @@
 import sys
-import threading
 
-from src.motor.motor_list import MOTORS
-from src.mouth.mouth import Mouth
-from src.utils.app_logger import AppLogger
+from motor.motor import Motor
+from mouth.mouth import Mouth
+from mouth.tracking_mode import TrackingMode
+from utils.app_logger import AppLogger
 
 MAX_SPEED = 10
 HIGH_SPEED = 5
-MID_SPEED = 3
-LOW_SPEED = 1
-
-CURRENT_MOTOR = MOTORS.get('NEMA17')
-
-# двигатель Ra
-PIN_DIR_RA = "PD22"     # 7 зеленый
-PIN_STEP_RA = "PD25"    # 5 синий
-PIN_ENABLE_RA = "PD26"  # 3 фиолетовый
-PIN_MS_ALL_RA = "PL2"   # 8 синий
-
-# пины двигателя Dec
-PIN_DIR_DEC = "PD16"      # 18 зеленый
-PIN_STEP_DEC = "PD15"     # 16 синий
-PIN_ENABLE_DEC = "PD18"   # 12 фиолетовый
-PIN_MS_ALL_DEC = "PL3"    # 10 сиреневый
-
-LOG = AppLogger.info("MouthEqController")
 
 
-class MouthEqController:
-
-    def __init__(self, mouth_params: Mouth, motor_type):
+class MouthController:
+    def __init__(self, mouth_params: Mouth, motor_params: Motor, motor_type,
+                 step_v_pin, dir_v_pin, enable_v_pin, ms_v_pins,
+                 step_h_pin, dir_h_pin, enable_h_pin, ms_h_pins):
         self.logger = AppLogger.info(mouth_params.name)
 
         self.logger.info(f"Инициализация монтировки: {mouth_params.name}")
         self.mouth = mouth_params
 
-        self.logger.info(f"Инициализация двигателя прямого восхождения (Ra): {CURRENT_MOTOR.name}")
-        self.motorRa = self._create_motor_controller_ra(motor_type)
+        self._create_motor_v_controller(dir_v_pin, enable_v_pin, motor_params, motor_type, ms_v_pins, step_v_pin)
+        self._create_motor_h_controller(dir_h_pin, enable_h_pin, motor_params, motor_type, ms_h_pins, step_h_pin)
 
-        self.logger.info(f"Инициализация двигателя склонения (Dec): {CURRENT_MOTOR.name}")
-        self.motorDec = self._create_motor_controller_dec(motor_type)
+        self.curr_v = 0.0
+        self.curr_h = 0.0
+        self.last_v = 0.0
+        self.last_h = 0.0
 
-        self.curr_ra = 0.0
-        self.curr_dec = 0.0
-        self.last_ra = 0.0
-        self.last_dec = 0.0
+    def _create_motor_h_controller(self, dir_h_pin, enable_h_pin, motor_params, motor_type, ms_h_pins, step_h_pin):
+        type = "Az" if self.mouth.tracking_mode == TrackingMode.ALT_AZ else "Dec"
+        self.logger.info(f"Инициализация двигателя склонения ({type}): {motor_params.name}")
 
-    def _create_motor_controller_dec(self, motor_type):
-        return self._create_motor_controller(motor_type, CURRENT_MOTOR, PIN_STEP_DEC, PIN_DIR_DEC, PIN_ENABLE_DEC,
-                                             [PIN_MS_ALL_DEC, PIN_MS_ALL_DEC, PIN_MS_ALL_DEC])
 
-    def _create_motor_controller_ra(self, motor_type):
-        return self._create_motor_controller(motor_type, CURRENT_MOTOR, PIN_STEP_RA, PIN_DIR_RA, PIN_ENABLE_RA,
-                                             [PIN_MS_ALL_RA, PIN_MS_ALL_RA, PIN_MS_ALL_RA])
+        self.motor_h = self._create_motor_controller(type, motor_type, motor_params, step_h_pin, dir_h_pin, enable_h_pin,
+                                                     ms_h_pins)
 
-    def _create_motor_controller(self, motor_type, motor_params, step_pin, dir_pin, enable_pin=None, ms_pins=None):
+    def _create_motor_v_controller(self, dir_v_pin, enable_v_pin, motor_params, motor_type, ms_v_pins, step_v_pin):
+        type = "Alt" if self.mouth.tracking_mode == TrackingMode.ALT_AZ else "Ra"
+        self.logger.info(f"Инициализация двигателя прямого восхождения ({type}): {motor_params.name}")
+
+        self.motor_v = self._create_motor_controller(type, motor_type, motor_params, step_v_pin, dir_v_pin, enable_v_pin,
+                                                     ms_v_pins)
+
+    def _create_motor_controller(self, type, motor_type, motor_params, step_pin, dir_pin, enable_pin=None, ms_pins=None):
         if motor_type == "real":
             self.logger.info("Выбран реальный тип контроллера A4988")
             try:
@@ -62,32 +49,23 @@ class MouthEqController:
                 return A4988MotorController(motor_params, step_pin, dir_pin, enable_pin, ms_pins)
             except ImportError as e:
                 self.logger.error(
-                    "Ошибка: A4988 контроллер недоступен. Убедитесь, что установлены зависимости (например, OPi.GPIO).",
+                    "Ошибка: A4988 контроллер недоступен. Убедитесь, что установлены зависимости (например, OPi.GPIO) или запуститесь в режиме симуляции",
                     file=sys.stderr)
                 sys.exit(1)
         elif motor_type == "sim":
-            self.logger.info("Выбран симулятор контроллера")
+            self.logger.info(f"Для двигателя {type} выбран симулятор контроллера")
             from src.motor.controller.sim_motor_controller import SimMotorController
             return SimMotorController(motor_params, step_pin, dir_pin, enable_pin, ms_pins)
         else:
             self.logger.critical(f"Неизвестный тип мотор-контроллера: {motor_type}")
             raise ValueError(f"Invalid motor type: {motor_type}")
 
-    def goto(self, ra, dec):
+    def goto(self, vert, horizont):
         try:
-            self.logger.info(f"Инициализация поворота: {ra}°, {dec}°")
+            self.logger.info(f"Инициализация поворота: {vert}°, {horizont}°")
 
-            # Создаем потоки для каждого двигателя
-            thread1 = threading.Thread(target=self.move_motor_sync, args=(self.motorRa, ra, MAX_SPEED))
-            thread2 = threading.Thread(target=self.move_motor_sync, args=(self.motorDec, dec, MAX_SPEED))
-
-            # Запускаем потоки одновременно
-            thread1.start()
-            thread2.start()
-
-            # Ждем завершения обоих потоков
-            thread1.join()
-            thread2.join()
+            self.move_motor_v_sync(vert, MAX_SPEED)
+            self.move_motor_h_sync(horizont, MAX_SPEED)
 
             self.logger.info("Оба двигателя завершили движение")
         except ValueError:
@@ -95,8 +73,12 @@ class MouthEqController:
         except KeyboardInterrupt:
             self.logger.warn("Прервано пользователем")
 
-        return {self.curr_ra, self.curr_dec}
+        return {self.curr_v, self.curr_h}
 
-    def move_motor_sync(self, motor, angle, speed):
+    def move_motor_v_sync(self, angle, speed):
         """Функция для движения двигателя в отдельном потоке"""
-        motor.move_degrees(angle, speed)
+        self.motor_v.move_degrees(angle, speed)
+
+    def move_motor_h_sync(self, angle, speed):
+        """Функция для движения двигателя в отдельном потоке"""
+        self.motor_h.move_degrees(angle, speed)

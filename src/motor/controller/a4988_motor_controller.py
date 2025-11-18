@@ -5,6 +5,7 @@ import time
 
 import OPi.GPIO as GPIO
 
+from motor.motor import Motor
 from src.utils.app_logger import AppLogger
 
 LOGGER = AppLogger.info("A4988MotorController")
@@ -13,7 +14,7 @@ LOGGER = AppLogger.info("A4988MotorController")
 class A4988MotorController:
     """Контроллер для драйвера A4988"""
 
-    def __init__(self, motor_params, step_pin, dir_pin, enable_pin=None, ms_pins=None):
+    def __init__(self, motor_params: Motor, step_pin, dir_pin, enable_pin=None, ms_pins=None):
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.SUNXI)
 
@@ -81,7 +82,7 @@ class A4988MotorController:
             self.activate()
 
             # Расчет шагов с учетом микрошага
-            steps = int((degrees / 360.0) * self.motor_params.steps_per_turn * self.microstep_divisor)
+            steps = self._calculate_steps(degrees)
 
             direction = "по часовой" if steps >= 0 else "против часовой"
             LOGGER.info(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
@@ -89,6 +90,10 @@ class A4988MotorController:
 
             self.move(steps, speed)
             self.deactivate()
+
+    def _calculate_steps(self, degrees):
+        steps = int((degrees / 360.0) * self.motor_params.steps_per_turn * self.microstep_divisor)
+        return steps
 
     def move(self, steps, speed=5):
         """Движение на указанное количество шагов"""

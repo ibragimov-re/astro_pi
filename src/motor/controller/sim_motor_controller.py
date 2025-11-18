@@ -3,6 +3,7 @@
 import threading
 import time
 
+from motor.motor import Motor
 from src.utils.app_logger import AppLogger
 
 LOGGER = AppLogger.info("SimMotorController")
@@ -11,7 +12,7 @@ LOGGER = AppLogger.info("SimMotorController")
 class SimMotorController:
     """Контроллер для симулятора двигателя"""
 
-    def __init__(self, motor_params, step_pin, dir_pin, enable_pin=None, ms_pins=None):
+    def __init__(self, motor_params: Motor, step_pin, dir_pin, enable_pin=None, ms_pins=None):
 
         self.motor_params = motor_params
 
@@ -41,9 +42,6 @@ class SimMotorController:
             LOGGER.info("Микрошаг не настроен (не заданы MS пины)")
 
         self.is_active = False
-
-        LOGGER.info(f"Инициализирован симулятор для: {self.motor_params.name}")
-        LOGGER.info(f"Микрошаг: 1/{self.microstep_divisor}")
 
     def set_microstep(self, divisor):
         LOGGER.info(f"Установлен микрошаг: 1/{divisor}")

@@ -1,6 +1,8 @@
 import datetime
 
-from src.mouth.controller.mouth_controller import MouthEqController
+from motor.motor_list import MOTORS
+from mouth.controller.mouth_sim_controller import MouthSimController
+from src.mouth.controller.mouth_eq_controller import MouthEqController
 from src.mouth.mouth_list import MOUTH_LIST
 from src.nexstar.commands import Command
 from src.server import Server
@@ -12,6 +14,7 @@ from .nexstar_utils import strip_command_letter, to_byte_command, get_time, byte
 # manual by commands https://s3.amazonaws.com/celestron-site-support-files/support_files/1154108406_nexstarcommprot.pdf
 
 DEFAULT_MOUTH = MOUTH_LIST["AstroPi"]
+CURRENT_MOTOR = MOTORS.get('NEMA17')
 
 POLAR_RA_DEC = [38.044259548187256, 89.259]  # Polar Star RA/DEC
 ZERO_RA_DEC = [0.0, 0.0]
@@ -28,7 +31,10 @@ class ServerNexStar(Server):
     def __init__(self, host='0.0.0.0', port=4030, motor_type='real'):
         super().__init__(host, port, motor_type, Server.name + ' [NexStar]')
 
-        self.mouth = MouthEqController(DEFAULT_MOUTH, motor_type)
+        if motor_type == "sim":
+            self.mouth = MouthSimController(DEFAULT_MOUTH, CURRENT_MOTOR)
+        else:
+            self.mouth = MouthEqController(DEFAULT_MOUTH, CURRENT_MOTOR, motor_type)
 
         self.last_ra = DEFAULT_TARGET[0]
         self.last_dec = DEFAULT_TARGET[1]
