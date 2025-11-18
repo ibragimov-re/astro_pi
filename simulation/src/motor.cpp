@@ -67,6 +67,11 @@ double Motor::getShaftAngle() const {
 }
 
 
+void Motor::resetShaftAngle() {
+    setShaftAngle(0);
+}
+
+
 void Motor::setOnChangeCallback(AngleChangeCallback cb) const {
     onChange = std::move(cb);
 }
