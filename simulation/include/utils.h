@@ -5,6 +5,7 @@
 #include <comdef.h>
 
 
+
 // ------------------------------------------------------------------------------
 // Конвертация строк
 // ------------------------------------------------------------------------------
@@ -15,6 +16,15 @@ namespace strUtils {
 
     inline _bstr_t wstrToBstr(const std::wstring& wstr) {
         return _bstr_t(wstr.c_str());
+    }
+
+    inline std::wstring strToWStr(const std::string& str) {
+        if (str.empty()) return L"";
+
+        std::wstring wstr(str.size(), L'\0');
+        size_t converted = 0;
+        mbstowcs_s(&converted, &wstr[0], wstr.size() + 1, str.c_str(), str.size());
+        return wstr;
     }
 }
 
