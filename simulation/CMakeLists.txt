@@ -15,8 +15,10 @@ add_subdirectory(extern/pybind11)
 # Создать Python модуль
 pybind11_add_module(kopis
 	"src/main.cpp"
+	"src/assembly.cpp"
 	"src/board_orangepi3lts.cpp"
 	"src/pin.cpp"
+	"src/motor.cpp"
 	"src/ks_service.cpp"
 	"src/ks_binder.cpp"
 	"tests/gpio_test.cpp"
