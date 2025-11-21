@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 
-import OPi.GPIO as GPIO
 import time
 
+import kopis as GPIO
 
-class A4988MotorController:
-    """Контроллер для драйвера A4988"""
+from src.motor.motor import Motor
+from src.utils.app_logger import AppLogger
 
-    def __init__(self, motor_params, step_pin, dir_pin, enable_pin=None, ms_pins=None):
+LOGGER = AppLogger.info("SimMotorController")
+
+
+class SimMotorController:
+    """Контроллер для симулятора двигателя"""
+
+    def __init__(self, motor_params: Motor, step_pin, dir_pin, enable_pin=None, ms_pins=None):
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.SUNXI)
 
@@ -41,16 +47,20 @@ class A4988MotorController:
         self.microstep_divisor = 1  # Значение по умолчанию
 
         if self.ms_pins:
-            for pin in self.ms_pins:
-                GPIO.setup(pin, GPIO.OUT)
+            GPIO.setup(self.ms_pins[0], GPIO.OUT)
+
+            # сейчас у нас нет свободных gpio что бы подключить все пины MS обоих двигателей
+            # for pin in self.ms_pins:
+            #     GPIO.setup(pin, GPIO.OUT)
+
             self.set_microstep(16)  # 1/16 по умолчанию
         else:
-            print("Микрошаг не настроен (не заданы MS пины)")
+            LOGGER.info("Микрошаг не настроен (не заданы MS пины)")
 
         self.is_active = False
 
-        print(f"Инициализирован A4988 для: {self.motor_params.name}")
-        print(f"Микрошаг: 1/{self.microstep_divisor}")
+        LOGGER.info(f"Инициализирован A4988 для: {self.motor_params.name}")
+        LOGGER.info(f"Микрошаг: 1/{self.microstep_divisor}")
 
     def set_microstep(self, divisor):
         """Установка микрошага"""
@@ -58,26 +68,28 @@ class A4988MotorController:
             for pin, value in zip(self.ms_pins, self.microstep_config[divisor]):
                 GPIO.output(pin, value)
             self.microstep_divisor = divisor
-            print(f"Установлен микрошаг: 1/{divisor}")
+            LOGGER.info(f"Установлен микрошаг: 1/{divisor}")
         else:
-            print(f"Невозможно установить микрошаг 1/{divisor}")
+            LOGGER.info(f"Невозможно установить микрошаг 1/{divisor}")
 
     def move_degrees(self, degrees, speed=5):
-
-        speed = self.motor_params.max_speed if speed > self.motor_params.max_speed else speed
-
         """Поворот на заданное количество градусов"""
-        self.activate()
+        with self.lock:  # thread safety
+            self.activate()
 
-        # Расчет шагов с учетом микрошага
+            # Расчет шагов с учетом микрошага
+            steps = self._calculate_steps(degrees)
+
+            direction = "по часовой" if steps >= 0 else "против часовой"
+            LOGGER.info(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
+            LOGGER.info(f"Микрошаг: 1/{self.microstep_divisor}, Скорость: {speed}")
+
+            self.move(steps, speed)
+            self.deactivate()
+
+    def _calculate_steps(self, degrees):
         steps = int((degrees / 360.0) * self.motor_params.steps_per_turn * self.microstep_divisor)
-
-        direction = "по часовой" if steps >= 0 else "против часовой"
-        print(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
-        print(f"Микрошаг: 1/{self.microstep_divisor}, Скорость: {speed}")
-
-        self.move(steps, speed)
-        self.deactivate()
+        return steps
 
     def move(self, steps, speed=5):
         """Движение на указанное количество шагов"""
@@ -97,7 +109,7 @@ class A4988MotorController:
         max_delay = 0.02  # Увеличил для надежности
         base_delay = max_delay - (speed - 1) * (max_delay - min_delay) / 9
 
-        print(f"Задержка на шаг: {base_delay:.6f} сек")
+        LOGGER.info(f"Задержка на шаг: {base_delay:.6f} сек")
 
         start_time = time.time()
 
@@ -112,9 +124,9 @@ class A4988MotorController:
             if steps_abs > 10 and i % (steps_abs // 10) == 0:
                 progress = (i / steps_abs) * 100
                 elapsed = time.time() - start_time
-                print(f"Выполнено: {progress:.1f}% ({i}/{steps_abs} шагов, {elapsed:.2f} сек)")
+                LOGGER.info(f"Выполнено: {progress:.1f}% ({i}/{steps_abs} шагов, {elapsed:.2f} сек)")
 
-        print(f"Движение завершено. Время: {time.time() - start_time:.2f} сек")
+        LOGGER.info(f"Движение завершено. Время: {time.time() - start_time:.2f} сек")
 
     def activate(self):
         """Включение драйвера"""
@@ -122,7 +134,7 @@ class A4988MotorController:
             if self.enable_pin:
                 GPIO.output(self.enable_pin, GPIO.LOW)
             self.is_active = True
-            print("Драйвер A4988 включен")
+            LOGGER.info("Драйвер включен")
 
     def deactivate(self):
         """Выключение драйвера"""
@@ -130,10 +142,13 @@ class A4988MotorController:
             if self.enable_pin:
                 GPIO.output(self.enable_pin, GPIO.HIGH)
             self.is_active = False
-            print("Драйвер A4988 выключен")
+            LOGGER.info("Драйвер выключен")
 
     def release(self):
         """Освобождение ресурсов"""
         self.deactivate()
         GPIO.cleanup()
-        print("Контроллер A4988 отключен")
+        LOGGER.info("Контроллер полностью отключен")
+
+    def in_progress(self):
+        return self.is_active

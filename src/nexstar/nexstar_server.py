@@ -1,28 +1,20 @@
 import datetime
-import logging
 
-from .nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
-    location_to_bytes, byte_to_datetime_utc
-from src.nexstar.commands import Command, Device, Model
+from src.motor.motor_list import MOTORS
+from src.mouth.controller.mouth_sim_controller import MouthSimController
+from src.mouth.controller.mouth_eq_controller import MouthEqController
+from src.mouth.mouth_list import MOUTH_LIST
+from src.nexstar.commands import Command
 from src.server import Server
 from src.utils import astropi_utils
-from src.utils.tracking_mode import TrackingMode
-
+from .constants import Device
+from .nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
+    location_to_bytes, byte_to_datetime_utc
 
 # manual by commands https://s3.amazonaws.com/celestron-site-support-files/support_files/1154108406_nexstarcommprot.pdf
 
-
-class Mouth:
-    def __init__(self, model, has_gps, tracking_mode, name="No name NexStar mount with GoTo"):
-        self.name = name
-        self.model = model
-        self.has_gps = has_gps
-        self.tracking_mode = tracking_mode  # как я понял это определяет какой будет тип компенсации вращения - по экваториальной или азимутальной оси
-
-
-CGX_MOUTH = Mouth(Model.CGE, True, TrackingMode.EQ_NORTH, "Celestron Montatura CGX GoTo")
-SE_MOUTH = Mouth(Model.SE_4_5, True, TrackingMode.ALT_AZ, "Celestron SE 5")
-DEFAULT = SE_MOUTH
+DEFAULT_MOUTH = MOUTH_LIST["AstroPi"]
+CURRENT_MOTOR = MOTORS.get('NEMA17')
 
 POLAR_RA_DEC = [38.044259548187256, 89.259]  # Polar Star RA/DEC
 ZERO_RA_DEC = [0.0, 0.0]
@@ -31,40 +23,28 @@ DEFAULT_TARGET = POLAR_RA_DEC
 APP_VERSION = [4, 10]
 DEVICE_VERSION = [1, 0]
 
-BUFFER = 18  # in documentation, the longest command is 18 bytes
+NEXSTAR_BUFFER = 18  # in documentation, the longest command is 18 bytes
 
 
 class ServerNexStar(Server):
-    buffer = 18
-    major = APP_VERSION[0]
-    minor = APP_VERSION[1]
-    last_ra = DEFAULT_TARGET[0]
-    last_dec = DEFAULT_TARGET[1]
 
-    def __init__(self, host='0.0.0.0', port=4030):
-        super().__init__(host, port, Server.name + ' [NexStar]')
-        self.mouth = DEFAULT
+    def __init__(self, host='0.0.0.0', port=4030, motor_type='real', sync=False):
+        super().__init__(host, port, Server.name, motor_type, "NexStar", sync)
+
+        if motor_type == "sim":
+            self.mouth = MouthSimController(DEFAULT_MOUTH, CURRENT_MOTOR)
+        else:
+            self.mouth = MouthEqController(DEFAULT_MOUTH, CURRENT_MOTOR, motor_type)
+
         self.last_ra = DEFAULT_TARGET[0]
         self.last_dec = DEFAULT_TARGET[1]
 
+        self.buffer = NEXSTAR_BUFFER
+        self.major = APP_VERSION[0]
+        self.minor = APP_VERSION[1]
+
     def get_buffer(self):
         return self.buffer
-
-    def handshake(self, data):
-        self.logger.info(f"Клиент запрашивает состояние. ОК")
-        return data[1:] + Command.END
-
-    def set_time(self, data):
-        now = datetime.datetime.now()
-        dt = byte_to_datetime_utc(data)
-        # TODO: set system time
-        # set_hardware_clock(dt)
-        diff = (now - dt).total_seconds()
-        if abs(diff) < 10.0:
-            self.logger.info(f"Рассинхронизация времени не существенная: {diff:+.2f} секунд(ы)")
-            return Command.END
-        else:
-            return b''
 
     def handle_command(self, data):
 
@@ -115,9 +95,27 @@ class ServerNexStar(Server):
         elif data.startswith(Command.MODEL):
             return self.get_model()
         elif data.startswith(Command.CANCEL_GOTO):
-            return self.cancel_goto()
+            self.cancel_goto()
+            return Command.END
         else:
             return Command.END
+
+    def handshake(self, data):
+        self.logger.info(f"Клиент запрашивает состояние. ОК")
+        return data[1:] + Command.END
+
+    def set_time(self, data):
+        now = datetime.datetime.now()
+        dt = byte_to_datetime_utc(data)
+        # TODO: set system time
+        # set_hardware_clock(dt)
+        diff = (now - dt).total_seconds()
+        if abs(diff) < 10.0:
+            self.logger.info(f"Время синхронизировано (рассинхронизация: {diff:+.2f} секунд(ы)")
+            return Command.END
+        else:
+            self.logger.info(f"Время НЕ синхронизировано!")
+            return b''
 
     def get_app_version(self):
         self.logger.info(f"Версия приложения: v{self.major}.{self.minor}")
@@ -141,18 +139,18 @@ class ServerNexStar(Server):
 
     def get_device_version(self):
         self.logger.info(f"Версия устройства: v{DEVICE_VERSION[0]}.{DEVICE_VERSION[1]}")
-
         return self.version_to_byte(DEVICE_VERSION[0], DEVICE_VERSION[1])
 
     def get_model(self):
-        self.logger.info(f"Текущая модель: {self.mouth.model.name}")
-        return to_byte_command(self.mouth.model.value)
+        self.logger.info(f"Текущая модель: {self.mouth.mouth.model.name}")
+        return to_byte_command(self.mouth.mouth.model.value)
 
     def get_tracking_mode(self):
-        return to_byte_command(self.mouth.tracking_mode.value)
+        self.logger.info(f"Режим отслеживания движения: {self.mouth.mouth.tracking_mode}")
+        return to_byte_command(self.mouth.mouth.tracking_mode.value)
 
     def has_gps(self):
-        return self.mouth.has_gps
+        return self.mouth.mouth.has_gps
 
     def pass_through(self, data):
         dev_code = data[2]
@@ -173,17 +171,28 @@ class ServerNexStar(Server):
             return Command.END
 
     def get_location(self):
-        self.logger.info(f"Текущии GPS координаты: {self.location}")
-        return self.coord_bytes()
+        if self.location:
+            self.logger.info(f"Текущии GPS координаты: {self.location}")
+        else:
+            self.logger.info(f"Текущии GPS координаты не заданы")
+
+        return self.coord_bytes() + Command.END
 
     def set_location(self, data: bytes):
         self.location = bytes_to_location(data)
         self.logger.info(f"GPS координаты заданы: {self.location}")
 
     def is_goto_in_progress(self):
+        if self.goto_in_progress:
+             self.logger.info(f"Монтировка в процессе наведения GOTO (Ra: {self.mouth.curr_v}, Dec: {self.mouth.curr_h})")
+
         return bytes([self.goto_in_progress]) + Command.END
 
     def is_alignment_in_prog(self):
+        if self.alignment_completed:
+            self.logger.info(f"Монтировка выравнена")
+        else:
+            self.logger.info(f"Монтировка НЕ выравнена")
         return bytes([self.alignment_completed]) + Command.END
 
     # Собираем байтовую строку кокординат
@@ -191,26 +200,35 @@ class ServerNexStar(Server):
         if not self.location:
             return Command.END
 
-        return location_to_bytes(self.location) + Command.END
+        # return location_to_bytes(self.location) + Command.END
+        return location_to_bytes(self.location)
 
     def get_ra_dec(self, precise: bool = True):
-        last_ra_hex = self.get_last_ra_hex(precise)
-        last_dec_hex = self.get_last_dec_hex(precise)
+        """
+                Местоположение возвращается в виде шестнадцатеричного значения, представляющего долю оборота вокруг оси.
+            Ниже приведены два примера:
+            Если команда Get RA/DEC возвращает значение 34AB,12CE, то значение DEC равно 12CE в шестнадцатеричном формате. В процентах
+            от оборота это равно 4814/65536 = 0,07346. Чтобы рассчитать градусы, просто умножьте на 360, что даст значение
+            26,4441 градуса.
+        """
+        diff_ra = self.last_ra
+        diff_dec = self.last_dec
 
-        self.logger.info(f"Текущие координаты наведения: П.В (Ra):{self.last_ra} ({last_ra_hex}), Скл (Dec):{self.last_dec} ({last_dec_hex})")
+        diff_ra_hex = astropi_utils.degrees_to_hex(diff_ra, precise)
+        diff_dec_hex = astropi_utils.degrees_to_hex(diff_dec, precise)
 
-        return last_ra_hex.encode('ascii') + b',' + last_dec_hex.encode('ascii') + Command.END
+        # self.logger.info(f"Доля оборота до цели: П.В (Ra):{self.last_ra} ({diff_ra_hex}), Скл (Dec):{self.last_dec} ({diff_dec_hex})")
+
+        return diff_ra_hex.encode('ascii') + b',' + diff_dec_hex.encode('ascii') + Command.END
 
     def get_last_dec_hex(self, precise: bool = True):
         return astropi_utils.degrees_to_hex(self.last_dec, precise)
-
-    def get_last_ra_hex(self, precise: bool = True):
-        return astropi_utils.degrees_to_hex(self.last_ra, precise)
 
     def sync_ra_dec_precise(self, data):
         return self.sync_ra_dec(data, True)
 
     def sync_ra_dec(self, data, precise: bool = False):
+        self.logger.info(f"Старт команды SYNC (точный режим: {precise})")
         self.goto_in_progress = True
         ra_dec = strip_command_letter(data)
         ra_dec_arr = ra_dec.split(',')
@@ -220,7 +238,8 @@ class ServerNexStar(Server):
         self.last_ra = astropi_utils.hex_to_degrees(ra_hex, precise)
         self.last_dec = astropi_utils.hex_to_degrees(dec_hex, precise)
 
-        self.logger.info(f"Синхронизация по координатам: П.В (Ra):{self.last_ra} ({ra_hex}), Скл (Dec): {self.last_dec} ({dec_hex})")
+        self.logger.info(
+            f"Синхронизация по координатам: П.В (Ra):{self.last_ra} ({ra_hex}), Скл (Dec): {self.last_dec} ({dec_hex})")
 
         self.goto_in_progress = False
 
@@ -230,15 +249,29 @@ class ServerNexStar(Server):
         return self.goto_ra_dec(data, True)
 
     def goto_ra_dec(self, data, precise: bool = False):
+        self.logger.info(f"Старт команды GOTO (точный режим: {precise})")
+
         self.goto_in_progress = True
+
         ra_dec = strip_command_letter(data)
         ra_dec_arr = ra_dec.split(',')
 
-        ra_hex = ra_dec_arr[0]
-        dec_hex = ra_dec_arr[1]
+        ra_degrees = astropi_utils.hex_to_degrees(ra_dec_arr[0], precise)
+        dec_degrees = astropi_utils.hex_to_degrees(ra_dec_arr[1], precise)
 
-        self.last_ra = astropi_utils.hex_to_degrees(ra_hex, precise)
-        self.last_dec = astropi_utils.hex_to_degrees(dec_hex, precise)
+        ra_diff = ra_degrees - self.last_ra
+        dec_diff = dec_degrees - self.last_dec
+
+        self.logger.info(f"Наведение")
+        cur_ra_dec = self.mouth.goto(ra_diff, dec_diff)
+
+        self.curr_ra = 0.0
+        self.curr_dec = 0.0
+
+        # self.logger.info(f"Текущие координаты: {cur_ra_dec}") # TODO: cur_ra_dec - нужно вернуть реальные координаты поворота
+
+        self.last_ra = ra_degrees
+        self.last_dec = dec_degrees
 
         self.logger.info(f"Наведение по координатам: П.В (Ra):{self.last_ra}, Скл (Dec): {self.last_dec}")
 

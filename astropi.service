@@ -1,0 +1,14 @@
+[Unit]
+Description=Astro Pi Mouth Controller
+After=multi-user.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/astropi
+ExecStart=/bin/sh /home/astropi/start.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
