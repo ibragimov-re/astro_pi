@@ -1,9 +1,9 @@
 import sys
 
-from motor.motor import Motor
-from mouth.mouth import Mouth
-from mouth.tracking_mode import TrackingMode
-from utils.app_logger import AppLogger
+from src.motor.motor import Motor
+from src.mouth.mouth import Mouth
+from src.mouth.tracking_mode import TrackingMode
+from src.utils.app_logger import AppLogger
 
 MAX_SPEED = 10
 HIGH_SPEED = 5
@@ -49,8 +49,7 @@ class MouthController:
                 return A4988MotorController(motor_params, step_pin, dir_pin, enable_pin, ms_pins)
             except ImportError as e:
                 self.logger.error(
-                    "Ошибка: A4988 контроллер недоступен. Убедитесь, что установлены зависимости (например, OPi.GPIO) или запуститесь в режиме симуляции",
-                    file=sys.stderr)
+                    "Ошибка: A4988 контроллер недоступен. Убедитесь, что установлены зависимости (например, OPi.GPIO) или запуститесь в режиме симуляции")
                 sys.exit(1)
         elif motor_type == "sim":
             self.logger.info(f"Для двигателя {type} выбран симулятор контроллера")

@@ -1,7 +1,7 @@
-from motor.motor import Motor
-from mouth.controller.mouth_controller import MouthController
+from src.motor.motor import Motor
+from src.mouth.controller.mouth_controller import MouthController
 from src.mouth.mouth import Mouth
-from utils.app_logger import AppLogger
+from src.utils.app_logger import AppLogger
 
 MAX_SPEED = 10
 

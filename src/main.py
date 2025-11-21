@@ -8,6 +8,7 @@ DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = 4030
 
 log = AppLogger.info("MAIN")
+
 def get_motor_controller_type():
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--type', type=str, choices=['def', 'sim'], default='def',

@@ -1,7 +1,7 @@
 import datetime
 
-from motor.motor_list import MOTORS
-from mouth.controller.mouth_sim_controller import MouthSimController
+from src.motor.motor_list import MOTORS
+from src.mouth.controller.mouth_sim_controller import MouthSimController
 from src.mouth.controller.mouth_eq_controller import MouthEqController
 from src.mouth.mouth_list import MOUTH_LIST
 from src.nexstar.commands import Command
