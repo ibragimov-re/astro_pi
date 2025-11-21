@@ -37,7 +37,7 @@ class MouthEqController(MouthController):
 
     def goto(self, ra, dec):
         try:
-            super().logger.info(f"Инициализация поворота: {ra}°, {dec}°")
+            self.logger.info(f"Инициализация поворота: {ra}°, {dec}°")
 
             # Создаем потоки для каждого двигателя
             thread_ra = threading.Thread(target=super().move_motor_v_sync, args=(ra, MAX_SPEED))
@@ -57,4 +57,4 @@ class MouthEqController(MouthController):
         except KeyboardInterrupt:
             self.logger.warn("Прервано пользователем")
 
-        return {super().curr_v, super().curr_h}
+        return {self.curr_v, self.curr_h}

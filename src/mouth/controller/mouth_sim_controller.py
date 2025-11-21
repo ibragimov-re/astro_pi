@@ -39,4 +39,4 @@ class MouthSimController(MouthController):
         except KeyboardInterrupt:
             self.logger.warn("Прервано пользователем")
 
-        return {super().curr_v, super().curr_h}
+        return {self.curr_v, self.curr_h}

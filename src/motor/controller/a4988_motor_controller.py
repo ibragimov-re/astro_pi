@@ -3,7 +3,7 @@
 import threading
 import time
 
-import OPi.GPIO as GPIO
+import kopis as GPIO
 
 from motor.motor import Motor
 from src.utils.app_logger import AppLogger

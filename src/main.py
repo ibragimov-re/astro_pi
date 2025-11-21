@@ -38,10 +38,11 @@ def main():
     args = parser.parse_args()
 
     server = None
+    is_sync = args.sync or args.type == 'sim'
     if args.protocol == 'lx200':
-        server = ServerLX200(args.ip, args.port, args.type, args.sync)
+        server = ServerLX200(args.ip, args.port, args.type, is_sync)
     elif args.protocol == 'nexstar':
-        server = ServerNexStar(args.ip, args.port, args.type, args.sync)
+        server = ServerNexStar(args.ip, args.port, args.type, is_sync)
 
     try:
         server.start()
