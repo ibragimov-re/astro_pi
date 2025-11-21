@@ -183,10 +183,9 @@ class ServerNexStar(Server):
         self.logger.info(f"GPS координаты заданы: {self.location}")
 
     def is_goto_in_progress(self):
-        # if self.goto_in_progress:
-        #     self.logger.info(f"Монтировка в процессе наведения GOTO")
-        # else:
-        #     self.logger.info(f"Монтировка в покое")
+        if self.goto_in_progress:
+             self.logger.info(f"Монтировка в процессе наведения GOTO (Ra: {self.mouth.curr_v}, Dec: {self.mouth.curr_h})")
+
         return bytes([self.goto_in_progress]) + Command.END
 
     def is_alignment_in_prog(self):
