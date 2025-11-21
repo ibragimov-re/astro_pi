@@ -1,5 +1,4 @@
 import socket
-import threading
 import time
 from abc import ABC, abstractmethod
 
@@ -18,7 +17,7 @@ class Server(ABC):
 
     LOG_RAW_COMMANDS = False
 
-    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi', motor_type='real'):
+    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi', motor_type='real', protocol='', sync=False):
         self.host = host
         self.port = port
         self.name = name
@@ -39,6 +38,8 @@ class Server(ABC):
         self.curr_dec = 0.0
         self.last_update_time = time.time()
         self.motor_type = motor_type
+        self.protocol = protocol
+        self.sync = sync
 
     def _setup_server_socket(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -105,18 +106,21 @@ class Server(ABC):
         self.running = True
         self.server_socket.listen()
         host_ip = astropi_utils.get_local_ip()
-        self.logger.info(f"Сервер {self.name} запущен на {host_ip}:{self.port}")
+        self.logger.info(f"Сервер {self.name} запущен на {host_ip}:{self.port} (протокол: {self.protocol}, режим: {'синхронный' if self.sync else 'асинхронный'})")
 
         try:
             while self.running:
                 try:
                     conn, addr = self.server_socket.accept()
-                    client_thread = threading.Thread(
+                    if self.sync:
+                        self._handle_client(conn, addr)
+                    else:
+                        import threading
+                        client_thread = threading.Thread(
                         target=self._handle_client,
                         args=(conn, addr),
-                        daemon=True
-                    )
-                    client_thread.start()
+                        daemon=True)
+                        client_thread.start()
                 except socket.timeout:
                     continue
         except Exception as e:

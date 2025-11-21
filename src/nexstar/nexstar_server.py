@@ -28,8 +28,8 @@ NEXSTAR_BUFFER = 18  # in documentation, the longest command is 18 bytes
 
 class ServerNexStar(Server):
 
-    def __init__(self, host='0.0.0.0', port=4030, motor_type='real'):
-        super().__init__(host, port, motor_type, Server.name + ' [NexStar]')
+    def __init__(self, host='0.0.0.0', port=4030, motor_type='real', sync=False):
+        super().__init__(host, port, Server.name, motor_type, "NexStar", sync)
 
         if motor_type == "sim":
             self.mouth = MouthSimController(DEFAULT_MOUTH, CURRENT_MOTOR)
@@ -183,10 +183,10 @@ class ServerNexStar(Server):
         self.logger.info(f"GPS координаты заданы: {self.location}")
 
     def is_goto_in_progress(self):
-        if self.goto_in_progress:
-            self.logger.info(f"Монтировка в процессе наведения GOTO")
-        else:
-            self.logger.info(f"Монтировка в покое")
+        # if self.goto_in_progress:
+        #     self.logger.info(f"Монтировка в процессе наведения GOTO")
+        # else:
+        #     self.logger.info(f"Монтировка в покое")
         return bytes([self.goto_in_progress]) + Command.END
 
     def is_alignment_in_prog(self):

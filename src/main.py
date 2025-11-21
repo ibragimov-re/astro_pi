@@ -16,7 +16,8 @@ def get_motor_controller_type():
     return args.type
 
 def main():
-    parser = argparse.ArgumentParser(description='Запуск сервера телескопа')
+    parser = argparse.ArgumentParser(description='Запуск сервера монтировки')
+
     parser.add_argument('-r', '--protocol', type=str, default='lx200',
                         choices=['lx200', 'nexstar'],
                         help='Протокол сервера (по умолчанию: lx200')
@@ -31,15 +32,16 @@ def main():
                         choices=['real', 'sim'],
                         help="Тип мотор-контроллера:  для 'real' требуется библиотека OPi.GPIO, 'sim' для симуляции")
 
+    parser.add_argument('-s', '--sync', action=argparse.BooleanOptionalAction, default=False,
+                        help="Синхронный режим (по умолчанию: False)")
+
     args = parser.parse_args()
 
     server = None
     if args.protocol == 'lx200':
-        log.info(f"Запуск LX200 сервера на порту {args.port}")
-        server = ServerLX200(args.ip, args.port, args.type)
+        server = ServerLX200(args.ip, args.port, args.type, args.sync)
     elif args.protocol == 'nexstar':
-        log.info(f"Запуск NexStar сервера на порту {args.port}")
-        server = ServerNexStar(args.ip, args.port, args.type)
+        server = ServerNexStar(args.ip, args.port, args.type, args.sync)
 
     try:
         server.start()

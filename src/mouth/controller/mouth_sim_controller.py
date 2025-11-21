@@ -25,7 +25,6 @@ class MouthSimController(MouthController):
                          PIN_STEP_V, PIN_DIR_V, PIN_ENABLE_V, [PIN_MS_ALL_V, PIN_MS_ALL_V, PIN_MS_ALL_V],
                          PIN_STEP_H, PIN_DIR_H, PIN_ENABLE_H, [PIN_MS_ALL_H, PIN_MS_ALL_H, PIN_MS_ALL_H])
         self.logger = AppLogger.info(mouth_params.name)
-        self.logger.info(f"Тип монтировки: симулятор")
 
     def goto(self, vert, horizont):
         try:
