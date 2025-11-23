@@ -43,7 +43,7 @@ namespace consoleUtils {
     }
 
     inline void printError(const std::wstring& msg) {
-        std::wstring text = L"[ERROR] " + msg;
+        std::wstring text = L"[KOPIS] [ERROR] " + msg;
 
         DWORD written;
         WriteConsoleW(GetStdHandle(STD_ERROR_HANDLE),
