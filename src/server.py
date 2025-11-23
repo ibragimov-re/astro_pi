@@ -2,13 +2,23 @@ import socket
 import time
 from abc import ABC, abstractmethod
 
-from src.location import Location
+from src.mouth.controller.mouth_real_controller import MouthRealController
+from src.mouth.controller.mouth_sim_controller import MouthSimController
+from src.utils.location import Location, SkyCoordinate
+from src.motor.motor_list import MOTORS
+from src.mouth.mouth_list import MOUTH_LIST
 from src.mouth.tracking_mode import TrackingMode
-from src.utils.app_logger import AppLogger
 from src.utils import astropi_utils
+from src.utils.app_logger import AppLogger
 
 TEST_LOCATION = Location.fromLatLong(58, 0, 54, 56, 16, 28)
 
+DEFAULT_MOUTH = MOUTH_LIST['AstroPi']
+CURRENT_MOTOR = MOTORS.get('NEMA17')
+
+POLAR_RA_DEC = SkyCoordinate(38.044259548187256, 89.259)  # Polar Star RA/DEC
+ZERO = SkyCoordinate(0.0, 0.0)
+DEFAULT_TARGET = POLAR_RA_DEC
 
 class Server(ABC):
     buffer = 1024
@@ -17,7 +27,7 @@ class Server(ABC):
 
     LOG_RAW_COMMANDS = False
 
-    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi', motor_type='real', protocol='', sync=False):
+    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi', mouth_type='real', protocol='', sync=False):
         self.host = host
         self.port = port
         self.name = name
@@ -28,18 +38,18 @@ class Server(ABC):
         self.location = TEST_LOCATION  # Location.zero_north_east()
         self.has_gps = False
 
-        self.goto_in_progress = False
         self.alignment_completed = True
 
         self.tracking_mode = TrackingMode.EQ_NORTH
-        self.last_ra = 0.0
-        self.last_dec = 0.0
-        self.curr_ra = 0.0
-        self.curr_dec = 0.0
         self.last_update_time = time.time()
-        self.motor_type = motor_type
+        self.mouth_type = mouth_type
         self.protocol = protocol
         self.sync = sync
+
+        if mouth_type == "sim":
+            self.mouth = MouthSimController(DEFAULT_MOUTH, CURRENT_MOTOR, DEFAULT_TARGET)
+        else:
+            self.mouth = MouthRealController(DEFAULT_MOUTH, CURRENT_MOTOR, DEFAULT_TARGET, "MotorX", "MotorY")
 
     def _setup_server_socket(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -100,7 +110,13 @@ class Server(ABC):
         self.location = loc
 
     def cancel_goto(self):
-        self.goto_in_progress = False
+        self.mouth.goto_in_progress = False
+
+    def get_sync(self) -> SkyCoordinate:
+        return self.mouth.sync
+
+    def get_current(self) -> SkyCoordinate:
+        return self.mouth.current
 
     def start(self):
         self.running = True

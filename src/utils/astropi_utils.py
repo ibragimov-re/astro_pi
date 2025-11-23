@@ -37,6 +37,9 @@ _DIGIT_CACHE = {
 def get_current_time():
     return datetime.datetime.now()
 
+def get_current_time_utc():
+    return datetime.datetime.now(datetime.UTC)
+
 
 def get_timezone_offset():
     tz_offset = -time.timezone // 3600

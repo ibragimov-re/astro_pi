@@ -3,40 +3,38 @@
 import threading
 import time
 
-import kopis as GPIO
-
-from motor.motor import Motor
+from src.motor.motor import Motor
+from motor.pins.a4988_motor_pins import A4988MotorPins
 from src.utils.app_logger import AppLogger
 
-LOGGER = AppLogger.info("A4988MotorController")
-
-
-class A4988MotorController:
+class StepMotorController:
     """Контроллер для драйвера A4988"""
 
-    def __init__(self, motor_params: Motor, step_pin, dir_pin, enable_pin=None, ms_pins=None):
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.SUNXI)
+    def __init__(self, motor_params: Motor, pins: A4988MotorPins, gpio_lib, axis, motor_index=None):
+        self.logger = AppLogger.info(motor_params.name)
 
+        self.axis = axis
+        self.motor_index = motor_index
         self.motor_params = motor_params
 
-        self.step_pin = step_pin
-        self.dir_pin = dir_pin
-        self.enable_pin = enable_pin
-        self.ms_pins = ms_pins
+        self.pins = pins
+
+        self.gpio = gpio_lib
+        self.gpio.setwarnings(False)
+        self.gpio.setmode(self.gpio.SUNXI)
 
         # Блокировка для потокобезопасности
         self.lock = threading.Lock()
 
         # Настройка пинов GPIO
-        GPIO.setup(self.step_pin, GPIO.OUT)
-        GPIO.setup(self.dir_pin, GPIO.OUT)
-        GPIO.output(self.step_pin, GPIO.LOW)
-        GPIO.output(self.dir_pin, GPIO.LOW)
+        self.gpio.setup(self.pins.step, self.gpio.OUT)
+        self.gpio.setup(self.pins.dir, self.gpio.OUT)
+        self.gpio.output(self.pins.step, self.gpio.LOW)
+        self.gpio.output(self.pins.dir, self.gpio.LOW)
 
-        if self.enable_pin:
-            GPIO.setup(self.enable_pin, GPIO.OUT)
-            GPIO.output(self.enable_pin, GPIO.HIGH)  # Выключено по умолчанию
+        if self.pins.enable:
+            self.gpio.setup(self.pins.enable, self.gpio.OUT)
+            self.gpio.output(self.pins.enable, self.gpio.HIGH)  # Выключено по умолчанию
 
         # Конфигурация микрошага
         self.microstep_config = {
@@ -50,31 +48,30 @@ class A4988MotorController:
         # Инициализация микрошага
         self.microstep_divisor = 1  # Значение по умолчанию
 
-        if self.ms_pins:
-            GPIO.setup(self.ms_pins[0], GPIO.OUT)
+        if self.pins.ms:
+            self.gpio.setup(self.pins.ms[0], self.gpio.OUT)
 
             # сейчас у нас нет свободных gpio что бы подключить все пины MS обоих двигателей
             # for pin in self.ms_pins:
-            #     GPIO.setup(pin, GPIO.OUT)
+            #     self.gpio.setup(pin, self.gpio.OUT)
 
             self.set_microstep(16)  # 1/16 по умолчанию
         else:
-            LOGGER.info("Микрошаг не настроен (не заданы MS пины)")
+            self.logger.info("Микрошаг не настроен (не заданы MS пины)")
 
         self.is_active = False
 
-        LOGGER.info(f"Инициализирован A4988 для: {self.motor_params.name}")
-        LOGGER.info(f"Микрошаг: 1/{self.microstep_divisor}")
+        self.logger.info(f"Инициализирован шаговый мотор '{self.motor_params.name}' с индексом '{self.motor_index}'")
 
     def set_microstep(self, divisor):
         """Установка микрошага"""
-        if divisor in self.microstep_config and self.ms_pins:
-            for pin, value in zip(self.ms_pins, self.microstep_config[divisor]):
-                GPIO.output(pin, value)
+        if divisor in self.microstep_config and self.pins.ms:
+            for pin, value in zip(self.pins.ms, self.microstep_config[divisor]):
+                self.gpio.output(pin, value)
             self.microstep_divisor = divisor
-            LOGGER.info(f"Установлен микрошаг: 1/{divisor}")
+            self.logger.info(f"Установлен микрошаг: 1/{divisor}")
         else:
-            LOGGER.info(f"Невозможно установить микрошаг 1/{divisor}")
+            self.logger.info(f"Невозможно установить микрошаг 1/{divisor}")
 
     def move_degrees(self, degrees, speed=5):
         """Поворот на заданное количество градусов"""
@@ -85,8 +82,8 @@ class A4988MotorController:
             steps = self._calculate_steps(degrees)
 
             direction = "по часовой" if steps >= 0 else "против часовой"
-            LOGGER.info(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
-            LOGGER.info(f"Микрошаг: 1/{self.microstep_divisor}, Скорость: {speed}")
+            self.logger.info(f"Поворот на {degrees}° ({abs(steps)} шагов, {direction})")
+            self.logger.info(f"Микрошаг: 1/{self.microstep_divisor}, Скорость: {speed}")
 
             self.move(steps, speed)
             self.deactivate()
@@ -106,53 +103,53 @@ class A4988MotorController:
         steps_abs = abs(steps)
 
         # Установка направления
-        GPIO.output(self.dir_pin, GPIO.HIGH if direction > 0 else GPIO.LOW)
+        self.gpio.output(self.pins.dir, self.gpio.HIGH if direction > 0 else self.gpio.LOW)
 
         # Расчет задержки
         min_delay = 0.001  # Увеличил для надежности
         max_delay = 0.02  # Увеличил для надежности
         base_delay = max_delay - (speed - 1) * (max_delay - min_delay) / 9
 
-        LOGGER.info(f"Задержка на шаг: {base_delay:.6f} сек")
+        self.logger.info(f"Задержка на шаг: {base_delay:.6f} сек")
 
         start_time = time.time()
 
         # Генерация импульсов
         for i in range(steps_abs):
-            GPIO.output(self.step_pin, GPIO.HIGH)
+            self.gpio.output(self.pins.step, self.gpio.HIGH)
             time.sleep(base_delay / 2)
-            GPIO.output(self.step_pin, GPIO.LOW)
+            self.gpio.output(self.pins.step, self.gpio.LOW)
             time.sleep(base_delay / 2)
 
             # Прогресс каждые 10%
             if steps_abs > 10 and i % (steps_abs // 10) == 0:
                 progress = (i / steps_abs) * 100
                 elapsed = time.time() - start_time
-                LOGGER.info(f"Выполнено: {progress:.1f}% ({i}/{steps_abs} шагов, {elapsed:.2f} сек)")
+                self.logger.info(f"Выполнено: {progress:.1f}% ({i}/{steps_abs} шагов, {elapsed:.2f} сек)")
 
-        LOGGER.info(f"Движение завершено. Время: {time.time() - start_time:.2f} сек")
+        self.logger.info(f"Движение завершено. Время: {time.time() - start_time:.2f} сек")
 
     def activate(self):
         """Включение драйвера"""
         if not self.is_active:
-            if self.enable_pin:
-                GPIO.output(self.enable_pin, GPIO.LOW)
+            if self.pins.enable:
+                self.gpio.output(self.pins.enable, self.gpio.LOW)
             self.is_active = True
-            LOGGER.info("Драйвер включен")
+            self.logger.info("Драйвер включен")
 
     def deactivate(self):
         """Выключение драйвера"""
         if self.is_active:
-            if self.enable_pin:
-                GPIO.output(self.enable_pin, GPIO.HIGH)
+            if self.pins.enable:
+                self.gpio.output(self.pins.enable, self.gpio.HIGH)
             self.is_active = False
-            LOGGER.info("Драйвер выключен")
+            self.logger.info("Драйвер выключен")
 
     def release(self):
         """Освобождение ресурсов"""
         self.deactivate()
-        GPIO.cleanup()
-        LOGGER.info("Контроллер полностью отключен")
+        self.gpio.cleanup()
+        self.logger.info("Контроллер полностью отключен")
 
     def in_progress(self):
         return self.is_active

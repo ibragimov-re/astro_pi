@@ -241,7 +241,7 @@ def grad_min_sec(degs):
 def eCoords2str(ra, dec, mtime):
     ra_h = ra * 12.0 / 2147483648
     dec_d = dec * 90.0 / 1073741824
-    time_s = math.floor(mtime / 1000000)
+    time_s = mtime / 1000000.0
 
     return ('%dh%dm%00.0fs' % hour_min_sec(ra_h), '%dº%d\'%00.0f\'\'' % grad_min_sec(dec_d), strftime("%Hh%Mm%Ss", localtime(time_s)))
 
@@ -265,7 +265,7 @@ def toJ2000(ra, dec, mtime):
     (h2, m2, s2) = grad_min_sec(dec_d)
 
     # From microseconds to seconds (Unix timestamp)
-    time_s = math.floor(mtime / 1000000)
+    time_s = mtime / 1000000.0
     t = ctime(time_s)
 
     return '%dh%dm%00.0fs/%dº%d\'%00.1f\'\' at %s' % (h1, m1, s1, h2, m2, s2, t)
