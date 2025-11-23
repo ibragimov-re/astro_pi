@@ -102,14 +102,6 @@ namespace tests {
         Motor& motorHorizontal = assembly.getMotor(L"#Nema17HS8401_Horizontal");
         Motor& motorVertical = assembly.getMotor(L"#Nema17HS8401_Vertical");
 
-
-        consoleUtils::printMessage(L"[TEST] Наведение на полярную звезду (Alt+58, скорость 1)\n");
-        motorVertical.rotateShaftAngle(58, 1);
-        Sleep(3000);
-        consoleUtils::printMessage(L"[TEST] Наведение в исходное состояние (Alt-58, скорость 4)\n");
-        motorVertical.rotateShaftAngle(-58, 4);
-        Sleep(2000);
-
         
         consoleUtils::printMessage(L"[TEST] Вращение вертикального мотора (Угол -30, скорость 3)\n");
         motorVertical.rotateShaftAngle(-30, 3);
@@ -137,9 +129,6 @@ namespace tests {
 
 
         Sleep(4000);
-        consoleUtils::printMessage(L"Выставление моторов в изначальное положение\n");
-        motorHorizontal.setShaftAngle(0);
-        motorVertical.setShaftAngle(0);
 
         consoleUtils::printMessage(L"[TEST] Тестовая управляющая программа завершена\n");
     }
