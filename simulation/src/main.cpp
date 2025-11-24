@@ -71,9 +71,9 @@ void setupMotors() {
 
 
 void initBoard() {
-	consoleUtils::printMessage(L"\n=====================================\n");
-	consoleUtils::printMessage(L"KOPIS (Kompas-3D Orange Pi Simulator)");
-	consoleUtils::printMessage(L"\n=====================================\n");
+	consoleUtils::printMessage(L"\n============================================\n");
+	consoleUtils::printMessage(L"KOPIS (Kompas-3D Orange Pi Simulator) v" + strUtils::strToWStr(KOPIS_VERSION));
+	consoleUtils::printMessage(L"\n============================================\n");
 
 	consoleUtils::printMessage(L"[KOPIS] Setting up board...\n");
 
@@ -149,6 +149,9 @@ struct BoardCapsule {
 
 PYBIND11_MODULE(kopis, m) {
 	m.doc() = "KOPIS (Kompas-3D Orange Pi Simulator) Python module";
+
+	// Версия модуля из CMake
+	m.attr("__version__") = KOPIS_VERSION;
 
 	// создание capsule и привязка к модулю
 	py::capsule capsule = py::capsule(new BoardCapsule(), [](void* ptr) {
