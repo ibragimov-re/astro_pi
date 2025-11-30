@@ -43,9 +43,8 @@ GPIO.kopis_motorsim.move_degrees(horizontal_motor_name, 230, 3)
 GPIO.kopis_motorsim.move_degrees(vertical_motor_name, -40, 1)
 time.sleep(2)
 
-print("Выставление моторов в исходное положение")
-GPIO.kopis_motorsim.reset_angle(horizontal_motor_name)
-GPIO.kopis_motorsim.reset_angle(vertical_motor_name)
+print("Выставление моторов в исходное положение для экваториальной монтировки")
+GPIO.kopis_motorsim.setup_motors_by_mount_type(GPIO.kopis_motorsim.EQ)
 time.sleep(2)
 
 

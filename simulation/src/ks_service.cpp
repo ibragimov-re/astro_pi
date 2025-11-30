@@ -11,11 +11,11 @@ KompasAPI7::IApplicationPtr ksGetApp() {
     kompasApp.GetActiveObject(L"Kompas.Application.7");
     if (!kompasApp) {
         consoleUtils::printError(L"Failed to find running Kompas-3D instance\n");
-        throw std::runtime_error("[KS-SERVICE] App not found");
+        throw std::runtime_error("[KOPIS] [KS-SERVICE] App not found");
     }
 
     std::wstring appName = strUtils::bstrToWStr(kompasApp->ApplicationName[true]);
-    consoleUtils::printMessage(L"[OK] Connected to Application: " + appName + L'\n');
+    consoleUtils::printMessage(L"[KOPIS] [OK] Connected to Application: " + appName + L'\n');
 
     return kompasApp;
 }
@@ -25,11 +25,11 @@ KompasAPI7::IKompasDocument3DPtr ksGetActiveDocument3D(KompasAPI7::IApplicationP
     KompasAPI7::IKompasDocument3DPtr doc3d = kompasApp->ActiveDocument;
     if (!doc3d) {
         consoleUtils::printError(L"Failed to get active Kompas-3D document\n");
-        throw std::runtime_error("[KS-SERVICE] Document not found");
+        throw std::runtime_error("[KOPIS] [KS-SERVICE] Document not found");
     }
 
     std::wstring docName = strUtils::bstrToWStr(doc3d->Name);
-    consoleUtils::printMessage(L"[OK] Connected to active document: " + docName + L'\n');
+    consoleUtils::printMessage(L"[KOPIS] [OK] Connected to active document: " + docName + L'\n');
 
     return doc3d;
 }
@@ -39,7 +39,7 @@ KompasAPI7::IFeature7Ptr ksGetFeatureByNameInDoc3D(KompasAPI7::IKompasDocument3D
     KompasAPI7::IPart7Ptr topPart(doc3d->TopPart);
     if (!topPart) {
         consoleUtils::printError(L"Failed to find top part in Kompas-3D document\n");
-        throw std::runtime_error("[KS-SERVICE] Top part not found");
+        throw std::runtime_error("[KOPIS] [KS-SERVICE] Top part not found");
     }
 
     KompasAPI7::IFeature7Ptr feature;
@@ -60,7 +60,7 @@ KompasAPI7::IFeature7Ptr ksGetFeatureByNameInDoc3D(KompasAPI7::IKompasDocument3D
     }
 
     consoleUtils::printError(L"Failed to find part in Kompas-3D document: " + name + L'\n');
-    throw std::runtime_error("[KS-SERVICE] Feature not found");
+    throw std::runtime_error("[KOPIS] [KS-SERVICE] Feature not found");
 }
 
 
@@ -71,7 +71,7 @@ std::vector<KompasAPI7::IBody7Ptr> ksGetFeatureBodies(KompasAPI7::IFeature7Ptr f
 
     if (bodiesVar.vt == VT_EMPTY || bodiesVar.vt == VT_NULL) {
         consoleUtils::printError(L"Failed to get feature bodies\n");
-        throw std::runtime_error("[KS-SERVICE] Feature bodies not found");
+        throw std::runtime_error("[KOPIS] [KS-SERVICE] Feature bodies not found");
     }
 
     // Если только одно тело
@@ -154,7 +154,7 @@ void ksSetVariableExpressionInPart(KompasAPI7::IPart7Ptr part, std::wstring vari
 
     if (!var) {
         consoleUtils::printError(L"Failed to find variable in Kompas-3D part: " + variableName + L'\n');
-        throw std::runtime_error("[KS-SERVICE] Variable not found");
+        throw std::runtime_error("[KOPIS] [KS-SERVICE] Variable not found");
     }
 
     var->Expression = strUtils::wstrToBstr(expression);
