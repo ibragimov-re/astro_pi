@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python -m src.main -r nexstar
+python3 -m src.main -r nexstar
 
 # аргументы сервера Astro pi:
 # -t (--type)     выбор типа контроллера двигателей (real - реальный "OPi.GPIO" (по умолчанию), sim - симуляция (kopis "Kompas-3D"))

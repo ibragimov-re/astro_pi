@@ -241,7 +241,7 @@ def grad_min_sec(degs):
 def eCoords2str(ra, dec, mtime):
     ra_h = ra * 12.0 / 2147483648
     dec_d = dec * 90.0 / 1073741824
-    time_s = math.floor(mtime / 1000000)
+    time_s = mtime / 1000000.0
 
     return ('%dh%dm%00.0fs' % hour_min_sec(ra_h), '%dº%d\'%00.0f\'\'' % grad_min_sec(dec_d), strftime("%Hh%Mm%Ss", localtime(time_s)))
 
@@ -253,22 +253,22 @@ def eCoords2str(ra, dec, mtime):
 # \return Equiatorial coordinates in J2000 string format
 
 
-def toJ2000(ra, dec, mtime):
-    # HhMmSs => H+(M/60)+(S/60^2) hours
-    # DºM'S'' => D+(M/60)+(S/60^2) degrees
-    # From hours to radians: (hours * 15 * pi)/180
+def toJ2000(ra_deg, dec_deg):
+        ra_hours = ra_deg / 15.0
+        hours = int(ra_hours)
+        ra_remainder = (ra_hours - hours) * 60
+        minutes = int(ra_remainder)
+        seconds = (ra_remainder - minutes) * 60
 
-    ra_h = ra * 12.0 / 2147483648
-    (h1, m1, s1) = hour_min_sec(ra_h)
+        sign = '+' if dec_deg >= 0 else '-'
+        dec_abs = abs(dec_deg)
+        deg = int(dec_abs)
+        dec_remainder = (dec_abs - deg) * 60
+        arcmin = int(dec_remainder)
+        arcsec = (dec_remainder - arcmin) * 60
 
-    dec_d = dec * 90.0 / 1073741824
-    (h2, m2, s2) = grad_min_sec(dec_d)
-
-    # From microseconds to seconds (Unix timestamp)
-    time_s = math.floor(mtime / 1000000)
-    t = ctime(time_s)
-
-    return '%dh%dm%00.0fs/%dº%d\'%00.1f\'\' at %s' % (h1, m1, s1, h2, m2, s2, t)
+        return (f"{hours:02d}h {minutes:02d}m {seconds:05.2f}s",
+                f"{sign}{deg:02d}° {arcmin:02d}' {arcsec:05.2f}\"")
 
 
 # Transforms coordinates from radians to the "Stellarium Telescope Protocol" format

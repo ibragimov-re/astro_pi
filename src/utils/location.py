@@ -7,10 +7,42 @@ class Coordinate:
     def __str__(self):
         return f"{self.deg}°{self.min}’{self.sec}”"
 
+    def decimal(self):
+        return self.deg + self.min / 60 + self.sec / 3600
+
     @staticmethod
     def zero():
         return Coordinate(0, 0, 0)
 
+class SkyCoordinate:
+    def __init__(self, ra_az_h=0.0, dec_alt_v=0.0):
+        self.ra_az_h=ra_az_h
+        self.dec_alt_v=dec_alt_v
+
+    def __str__(self):
+        return f"H: {self.ra_az_h}°; V: {self.dec_alt_v}°"
+
+    def get_ra(self):
+        return self.ra_az_h
+
+    def get_dec(self):
+        return self.dec_alt_v
+
+    def get_az(self):
+        return self.ra_az_h
+
+    def get_alt(self):
+        return self.dec_alt_v
+
+    def get_horizontal(self):
+        return self.ra_az_h
+
+    def get_vertical(self):
+        return self.dec_alt_v
+
+    @staticmethod
+    def zero():
+        return SkyCoordinate(0.0, 0.0)
 
 class Location:
     def __init__(self, lat: Coordinate = Coordinate(), long: Coordinate = Coordinate(), north_south=0, east_west=0):

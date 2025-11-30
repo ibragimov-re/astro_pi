@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from src.location import Coordinate, Location
+from utils.location import Coordinate, Location
 from src.utils import astropi_utils
 from .commands import Command
 
