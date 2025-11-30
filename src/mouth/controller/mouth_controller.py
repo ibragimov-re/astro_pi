@@ -9,7 +9,8 @@ from src.utils.location import SkyCoordinate
 
 MAX_SPEED = 10
 HIGH_SPEED = 5
-
+MID_SPEED = 3
+LOW_SPEED = 1
 
 class MouthController:
     def __init__(self, mouth_params: Mouth, motor_params: Motor, target: SkyCoordinate, pins_h: MotorPins, pins_v: MotorPins,
@@ -48,13 +49,13 @@ class MouthController:
     def get_mouth_tracking_type(self) -> TrackingMode:
         return self.params.tracking_mode
 
-    def goto(self, target: SkyCoordinate):
+    def goto(self, target: SkyCoordinate, speed=MAX_SPEED):
         try:
             self.logger.info(f"Инициализация поворота: по вертикали: {target.get_vertical():.4f}°, по горизонтали: {target.get_horizontal():.4f}°")
 
             self.goto_in_progress = True
-            self.move_motor_v(target.get_vertical(), MAX_SPEED)
-            self.move_motor_h(target.get_horizontal(), MAX_SPEED)
+            self.move_motor_v(target.get_vertical(), speed)
+            self.move_motor_h(target.get_horizontal(), speed)
 
             self.logger.info("Оба двигателя завершили движение")
         except ValueError:
@@ -66,10 +67,31 @@ class MouthController:
 
         return self.current
 
-    def move_motor_v(self, angle, speed):
-        """Функция для движения двигателя в отдельном потоке"""
+    def move_motor_v(self, angle, speed=HIGH_SPEED):
+        """Функция для движения двигателя по вертикали"""
+        if speed <= 0:
+            return
         self.motor_v.move_degrees(angle, speed)
+        self.current.dec_alt_v = angle
 
-    def move_motor_h(self, angle, speed):
-        """Функция для движения двигателя в отдельном потоке"""
+    def move_motor_h(self, angle, speed=HIGH_SPEED):
+        """Функция для движения двигателя по горизонтали"""
+        if speed <= 0:
+            return
         self.motor_h.move_degrees(angle, speed)
+        self.current.ra_az_h = angle
+
+
+    def slew_motor_v(self, angle, speed=HIGH_SPEED):
+        """Функция для сдвига двигателя по вертикали"""
+        if speed <= 0:
+            return
+        self.motor_v.move_degrees(angle, speed)
+        self.current.dec_alt_v += angle
+
+    def slew_motor_h(self, angle, speed=HIGH_SPEED):
+        """Функция для сдвига двигателя по горизонтали"""
+        if speed <= 0:
+            return
+        self.motor_h.move_degrees(angle, speed)
+        self.current.ra_az_h += angle

@@ -58,7 +58,7 @@ class MouthRealController(MouthController):
                     "Ошибка: A4988 контроллер недоступен. Убедитесь, что установлены зависимости (например, OPi.GPIO) или запуститесь в режиме симуляции")
                 sys.exit(1)
 
-    def goto(self, target: SkyCoordinate):
+    def goto(self, target: SkyCoordinate, speed=MAX_SPEED):
         try:
             self.logger.info(
                 f"Инициализация поворота: по вертикали: {target.get_vertical():.4f}°, по горизонтали: {target.get_horizontal():.4f}°")
@@ -66,8 +66,8 @@ class MouthRealController(MouthController):
             self.goto_in_progress = True
 
             # Создаем потоки для каждого двигателя
-            thread_ra = threading.Thread(target=super().move_motor_h, args=(target.get_horizontal(), MAX_SPEED))
-            thread_dec = threading.Thread(target=super().move_motor_v, args=(target.get_vertical(), MAX_SPEED))
+            thread_ra = threading.Thread(target=super().move_motor_h, args=(target.get_horizontal(), speed))
+            thread_dec = threading.Thread(target=super().move_motor_v, args=(target.get_vertical(), speed))
 
             # Запускаем потоки одновременно
             thread_ra.start()

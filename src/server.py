@@ -2,14 +2,13 @@ import socket
 import time
 from abc import ABC, abstractmethod
 
+from src.motor.motor_list import MOTORS
 from src.mouth.controller.mouth_real_controller import MouthRealController
 from src.mouth.controller.mouth_sim_controller import MouthSimController
-from src.utils.location import Location, SkyCoordinate
-from src.motor.motor_list import MOTORS
 from src.mouth.mouth_list import MOUTH_LIST
-from src.mouth.tracking_mode import TrackingMode
 from src.utils import astropi_utils
 from src.utils.app_logger import AppLogger
+from src.utils.location import Location, SkyCoordinate
 
 TEST_LOCATION = Location.fromLatLong(58, 0, 54, 56, 16, 28)
 
@@ -40,7 +39,6 @@ class Server(ABC):
 
         self.alignment_completed = True
 
-        self.tracking_mode = TrackingMode.EQ_NORTH
         self.last_update_time = time.time()
         self.mouth_type = mouth_type
         self.protocol = protocol
@@ -50,6 +48,8 @@ class Server(ABC):
             self.mouth = MouthSimController(DEFAULT_MOUTH, CURRENT_MOTOR, DEFAULT_TARGET)
         else:
             self.mouth = MouthRealController(DEFAULT_MOUTH, CURRENT_MOTOR, DEFAULT_TARGET, "MotorX", "MotorY")
+
+        self.tracking_mode = self.mouth.params.tracking_mode
 
     def _setup_server_socket(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -101,7 +101,7 @@ class Server(ABC):
         return self.tracking_mode
 
     def has_gps(self):
-        return self.has_gps
+        return self.mouth.params.has_gps
 
     def get_location(self):
         return self.location

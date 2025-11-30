@@ -21,15 +21,15 @@ class MouthSimController(MouthRealController):
     def create_motor_controller(self, axis, motor_params, pins, motor_index = None):
         return SimMotorController(motor_params, pins, GPIO, motor_index, axis)
 
-    def goto(self, target: SkyCoordinate):
+    def goto(self, target: SkyCoordinate, speed=MAX_SPEED):
         try:
             self.logger.info(
                 f"Инициализация поворота: по вертикали: {target.get_vertical():.4f}°, по горизонтали: {target.get_horizontal():.4f}°")
 
             self.goto_in_progress = True
 
-            super().move_motor_h(target.get_horizontal(), MAX_SPEED)
-            super().move_motor_v(target.get_vertical(), MAX_SPEED)
+            super().move_motor_h(target.get_horizontal(), speed)
+            super().move_motor_v(target.get_vertical(), speed)
 
             self.logger.info("Оба двигателя завершили движение")
         except ValueError:

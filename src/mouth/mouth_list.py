@@ -14,7 +14,7 @@ MOUTH_LIST = {
         tracking_mode=TrackingMode.ALT_AZ,
         name="Celestron SE 5"),
     'AstroPi': Mouth(
-        model=Model.CGE,
+        model=Model.ADVANCED_GT,
         has_gps=False,
         tracking_mode=TrackingMode.EQ_NORTH,
         name="Astro Pi Equatorial mount")

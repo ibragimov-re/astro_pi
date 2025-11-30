@@ -135,7 +135,7 @@ class StepMotorController:
             if self.pins.enable:
                 self.gpio.output(self.pins.enable, self.gpio.LOW)
             self.is_active = True
-            self.logger.info("Драйвер включен")
+            # self.logger.debug("Драйвер включен")
 
     def deactivate(self):
         """Выключение драйвера"""
@@ -143,13 +143,13 @@ class StepMotorController:
             if self.pins.enable:
                 self.gpio.output(self.pins.enable, self.gpio.HIGH)
             self.is_active = False
-            self.logger.info("Драйвер выключен")
+            # self.logger.debug("Драйвер выключен")
 
     def release(self):
         """Освобождение ресурсов"""
         self.deactivate()
         self.gpio.cleanup()
-        self.logger.info("Контроллер полностью отключен")
+        # self.logger.debug("Контроллер полностью отключен")
 
     def in_progress(self):
         return self.is_active

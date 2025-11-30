@@ -1,9 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 import datetime
+import math
 import socket
 import time
+from astropy.time import Time
+import astropy.units as u
+
+from utils.location import Coordinate
 
 STANDARD = 0x10000      # 16-bit: 65536
 PRECISE_NS = 0x1000000  # 24-bit: 16777216, this precision in NexStar documentation
@@ -123,7 +127,40 @@ def degrees_to_hex(degrees: float, precise: bool) -> str:
 def normalize_angle(angle: float):
     return angle % 360.0
 
+def normalize_radians(angle: float):
+    return angle % (2 * math.pi)
+
+def normalize_degrees_signed(angle):
+    while angle < -180.0:
+        angle += 360.0
+    while angle >= 180.0:
+        angle -= 360.0
+    return angle
+
+def normalize_degrees_unsigned(angle):
+    while angle < 0.0:
+        angle += 360.0
+    while angle >= 360.0:
+        angle -= 360.0
+    return angle
 
 def int_to_hex(value: int, digit: int) -> str:
     """Переводит целое число в шестнадцатеричную строку с заданным количеством разрядов (digit)"""
     return f"{value:0{digit}X}"
+
+
+def calculate_lst(utc_time: datetime.datetime, longitude: Coordinate) -> float:
+    utc_deg = (utc_time.hour + utc_time.minute / 60 + utc_time.second / 60)
+    long_deg_time = longitude.deg / 15 + longitude.min / 60 + longitude.sec / 60
+    lst = utc_deg + long_deg_time
+    return lst
+
+def calculate_lst_astropy(utc_time: datetime.datetime, longitude_deg: float):
+    """
+        utc_time: datetime.datetime с tz=timezone.utc
+        longitude_deg: восточная долгота в градусах (положительная)
+        Возвращает LST в градусах.
+        """
+    t = Time(utc_time, scale='utc')
+    lst = t.sidereal_time('apparent', longitude=longitude_deg * u.deg_C)
+    return lst.deg
