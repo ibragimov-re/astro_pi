@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.8)
 
-project(KOPIS VERSION 1.0 LANGUAGES CXX)
+project(KOPIS VERSION 1.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(KOMPAS_SDK_PATH "$ENV{KOMPAS_SDK}")
 set(KOMPAS_TLBS_PATH "${KOMPAS_SDK_PATH}lib")
 message(STATUS "Kompas TLBs path: ${KOMPAS_TLBS_PATH}")
+
+# Задание конкретной версии python, под которую будет собран pybind11-модуль
+find_package(Python3 3.13 EXACT REQUIRED COMPONENTS Interpreter Development)
 
 # Добавить pybind11 как подмодуль
 add_subdirectory(extern/pybind11)
@@ -23,6 +26,9 @@ pybind11_add_module(kopis
 	"src/ks_binder.cpp"
 	"tests/gpio_test.cpp"
 )
+
+# Передача версии проекта из CMake в C++ код для использования как версии Python-модуля
+target_compile_definitions(kopis PRIVATE KOPIS_VERSION="${PROJECT_VERSION}")
 
 target_include_directories(kopis PRIVATE
 	"include"

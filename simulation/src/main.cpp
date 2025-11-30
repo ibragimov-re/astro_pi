@@ -12,7 +12,14 @@
 
 
 namespace py = pybind11;
-//TO DO: комментарии к функциям
+
+
+// тип монтировки
+enum class MountType {
+	EQ, // По умолчанию
+	AZ
+};
+
 
 // режим нумерации пинов
 enum class PinNumberingMode {
@@ -32,13 +39,43 @@ static const OrangePi3LTS* g_board;
 // Умный указатель на KsBinder — владеет объектом
 static std::unique_ptr<KsBinder> g_binder;
 
+// По умолчанию тип монтировки - экваториальная
+static MountType g_mountType = MountType::EQ;
+
 static PinNumberingMode g_numberingMode = PinNumberingMode::NONE;
 
 
-void initBoard() {
-	consoleUtils::printMessage(L"KOPIS (Kompas-3D Orange Pi Simulator)\n\n");
+// Выставление моторов в исходное положение для экваториальной монтировки
+void setupMotorsForEQMount() {
+	Motor& motorHorizontal = g_assembly->getMotor(L"#Nema17HS8401_Horizontal");
+	Motor& motorVertical = g_assembly->getMotor(L"#Nema17HS8401_Vertical");
+	motorHorizontal.setShaftAngle(0);
+	motorVertical.setShaftAngle(90);
+}
 
-	consoleUtils::printMessage(L"Setting up board...\n");
+
+// Выставление моторов в исходное положение для азимутальной монтировки
+void setupMotorsForAZMount() {
+	Motor& motorHorizontal = g_assembly->getMotor(L"#Nema17HS8401_Horizontal");
+	Motor& motorVertical = g_assembly->getMotor(L"#Nema17HS8401_Vertical");
+	motorHorizontal.setShaftAngle(0);
+	motorVertical.setShaftAngle(0);
+}
+
+
+// Выставление моторов в исходное положение в зависимости от типа монтировки
+void setupMotors() {
+	if (g_mountType == MountType::EQ) setupMotorsForEQMount();
+	else setupMotorsForAZMount();
+}
+
+
+void initBoard() {
+	consoleUtils::printMessage(L"\n============================================\n");
+	consoleUtils::printMessage(L"KOPIS (Kompas-3D Orange Pi Simulator) v" + strUtils::strToWStr(KOPIS_VERSION));
+	consoleUtils::printMessage(L"\n============================================\n");
+
+	consoleUtils::printMessage(L"[KOPIS] Setting up board...\n");
 
 	auto startTimeSetupBoard = std::chrono::high_resolution_clock::now();
 	g_assembly = std::make_unique<Assembly>();
@@ -50,8 +87,10 @@ void initBoard() {
 	g_binder = std::make_unique<KsBinder>(*g_assembly);
 	auto endTimeSetupBoard = std::chrono::high_resolution_clock::now();
 
+	setupMotors();
+
 	auto durationInMillisecondsSetupBoard = duration_cast<std::chrono::milliseconds>(endTimeSetupBoard - startTimeSetupBoard);
-	consoleUtils::printMessage(L"[OK] Board setup done. Duration: " +
+	consoleUtils::printMessage(L"[KOPIS] [OK] Board setup done. Duration: " +
 		std::to_wstring(durationInMillisecondsSetupBoard.count()) + L" ms\n");
 }
 
@@ -86,16 +125,19 @@ struct BoardCapsule {
 		// инициализация объектов при загрузке модуля
 		initBoard();
 
-		consoleUtils::printMessage(L"\nRunning GPIO program...\n");
+		consoleUtils::printMessage(L"\n[KOPIS] Running GPIO program...\n");
 		startTimeRunGpioProg = std::chrono::high_resolution_clock::now();
 	}
 	~BoardCapsule() {
+		// Возвращение моторов в исходное положение
+		setupMotors();
+
 		auto endTimeRunGpioProg = std::chrono::high_resolution_clock::now();
 		auto durationInMillisecondsRunGpioProg = duration_cast<std::chrono::milliseconds>(endTimeRunGpioProg - startTimeRunGpioProg);
-		consoleUtils::printMessage(L"[OK] GPIO program finished. Duration: " +
+		consoleUtils::printMessage(L"[KOPIS] GPIO program finished. Duration: " +
 			std::to_wstring(durationInMillisecondsRunGpioProg.count()) + L" ms\n\n");
 
-		consoleUtils::printMessage(L"Turning simulator off...\n");
+		consoleUtils::printMessage(L"[KOPIS] Turning simulator off...\n");
 
 		// очистка указателей на объекты при выгрузке модуля
 		g_binder.reset();
@@ -107,6 +149,9 @@ struct BoardCapsule {
 
 PYBIND11_MODULE(kopis, m) {
 	m.doc() = "KOPIS (Kompas-3D Orange Pi Simulator) Python module";
+
+	// Версия модуля из CMake
+	m.attr("__version__") = KOPIS_VERSION;
 
 	// создание capsule и привязка к модулю
 	py::capsule capsule = py::capsule(new BoardCapsule(), [](void* ptr) {
@@ -230,11 +275,28 @@ PYBIND11_MODULE(kopis, m) {
 	// Подмодуль для управления моторами в симуляторе
 	py::module_ kopis_motorsim = m.def_submodule("kopis_motorsim", "Motor control submodule for simulator");
 
+	py::enum_<MountType>(kopis_motorsim, "MountType")
+		.value("EQ", MountType::EQ)
+		.value("AZ", MountType::AZ)
+		.export_values();
+
+	kopis_motorsim.def("setup_motors_by_mount_type", [](MountType type) {
+		g_mountType = type;
+		if (type == MountType::EQ) {
+			setupMotorsForEQMount();
+		}
+		else {
+			setupMotorsForAZMount();
+		}
+	}, "setup motors by mount type");
+
+
 	kopis_motorsim.def("move_degrees", [](const std::string& motorName, const double angle, const int speed) {
 		// Принимаем string из-за ограничений Python и конвертируем в wstring
 		Motor& motor = g_assembly->getMotor(strUtils::strToWStr(motorName));
 		motor.rotateShaftAngle(angle, speed);
 	}, "rotate motor by name, angle and speed");
+
 
 	kopis_motorsim.def("reset_angle", [](const std::string& motorName) {
 		Motor& motor = g_assembly->getMotor(strUtils::strToWStr(motorName));
@@ -250,9 +312,11 @@ PYBIND11_MODULE(kopis, m) {
 		tests::RunGpioPinsTest(*g_assembly);
 		}, "runs test program for GPIO pins");
 
+
 	kopis_extra.def("test_motors", []() {
 		tests::RunMotorsTest(*g_assembly);
 		}, "runs test program for motors");
+
 
 	kopis_extra.def("print_board_pins", []() {
 		g_board->printBoardPins();

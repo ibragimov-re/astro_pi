@@ -14,7 +14,7 @@ KsBinder::KsBinder(Assembly& assembly_)
 
         std::wstring boardPartName = L"#OrangePi3LTS";
         auto boardFeature = ksGetFeatureByNameInDoc3D(ksDoc3D, boardPartName);
-        consoleUtils::printMessage(L"[OK] Find board part: " + strUtils::bstrToWStr(boardFeature->Name) + L"\n");
+        consoleUtils::printMessage(L"[KOPIS] [OK] Find board part: " + strUtils::bstrToWStr(boardFeature->Name) + L"\n");
 
         auto bodiesVec = ksGetFeatureBodies(boardFeature);
         auto pinsVec = board.getAllPins();
@@ -161,6 +161,6 @@ void KsBinder::setupAllMotors() {
             ksRebuildDocument(ksDoc3D);
             });
 
-        consoleUtils::printMessage(L"[OK] Find motor assembly: " + motorName + L"\n");
+        consoleUtils::printMessage(L"[KOPIS] [OK] Find motor assembly: " + motorName + L"\n");
     }
 }
