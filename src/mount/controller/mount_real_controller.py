@@ -35,14 +35,12 @@ class MountRealController(MountController):
 
     def create_motor_v_controller(self, motor_params, pins, motor_index):
         axis = "Alt" if self.get_mount_tracking_type() == TrackingMode.ALT_AZ else "Dec"
-        self.logger.info("")
         self.logger.info(f"Инициализация двигателя прямого восхождения ({axis})")
 
         return self.create_motor_controller(axis, motor_params, pins, motor_index)
 
     def create_motor_h_controller(self, motor_params, pins, motor_index):
         axis = "Az" if self.get_mount_tracking_type() == TrackingMode.ALT_AZ else "Ra"
-        self.logger.info("")
         self.logger.info(f"Инициализация двигателя склонения ({axis})")
 
         return self.create_motor_controller(axis, motor_params, pins, motor_index)

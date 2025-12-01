@@ -1,4 +1,4 @@
-from nexstar.constants import Model
+from src.nexstar.constants import Model
 from src.mount.tracking_mode import TrackingMode
 
 
