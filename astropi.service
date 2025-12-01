@@ -1,5 +1,5 @@
 [Unit]
-Description=Astro Pi Mouth Controller
+Description=Astro Pi Mount Controller
 After=multi-user.target
 
 [Service]

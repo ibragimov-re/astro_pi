@@ -39,8 +39,14 @@ horizontal_motor_name = "#Nema17HS8401_Horizontal"
 vertical_motor_name = "#Nema17HS8401_Vertical"
 
 print("Перемещение моторов")
-GPIO.kopis_motorsim.move_degrees(horizontal_motor_name, 230, 3)
-GPIO.kopis_motorsim.move_degrees(vertical_motor_name, -40, 1)
+print("Поворот по горизонтали на 180° по ч.с.")
+GPIO.kopis_motorsim.move_degrees(horizontal_motor_name, 180, 3)
+print("Поворот по горизонтали на 90° по п.ч.с.")
+GPIO.kopis_motorsim.move_degrees(horizontal_motor_name, -90, 3)
+print("Поворот по вертикали на 90° по ч.с.")
+GPIO.kopis_motorsim.move_degrees(vertical_motor_name, 90, 1)
+print("Поворот по вертикали на 90° по п.ч.с.")
+GPIO.kopis_motorsim.move_degrees(vertical_motor_name, -90, 1)
 time.sleep(2)
 
 print("Выставление моторов в исходное положение для экваториальной монтировки")

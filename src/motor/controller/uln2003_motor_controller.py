@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import OPi.GPIO as GPIO
-from motor_controller import MotorController
+from src.motor.controller.motor_controller import MotorController
 
 
 class ULN2003Controller(MotorController):

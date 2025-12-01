@@ -9,14 +9,35 @@ DEFAULT_PORT = 4030
 
 log = AppLogger.info("MAIN")
 
-def get_motor_controller_type():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--type', type=str, choices=['def', 'sim'], default='def',
-                        help="Тип мотор-контроллера: 'real' для A4988 (требуется OPi.GPIO), 'sim' для симуляции")
-    args = parser.parse_args()
-    return args.type
+# Ra и Az - это горизонтальная ось (по экватору/горизонту)
+# Dec и Alt - это вертикальная ось (от экватора/горизонта)
 
 def main():
+    args = _parse_args()
+
+    is_sync = args.sync or args.type == 'sim'
+    protocol = args.protocol
+
+    server = None
+    try:
+        if protocol == 'lx200':
+            server = ServerLX200(args.ip, args.port, args.type, is_sync)
+        elif protocol == 'nexstar':
+            server = ServerNexStar(args.ip, args.port, args.type, is_sync)
+        else:
+            raise ValueError(f"Неизвестный протокол: {protocol}")
+
+        server.start()
+
+    except KeyboardInterrupt:
+        log.warning("Сервер остановлен")
+    except Exception as e:
+        log.error(f"Ошибка при запуске сервера: {e}")
+    finally:
+        if server is not None:
+            server.stop()
+
+def _parse_args():
     parser = argparse.ArgumentParser(description='Запуск сервера монтировки')
 
     parser.add_argument('-r', '--protocol', type=str, default='lx200',
@@ -36,23 +57,7 @@ def main():
     parser.add_argument('-s', '--sync', action=argparse.BooleanOptionalAction, default=False,
                         help="Синхронный режим (по умолчанию: False)")
 
-    args = parser.parse_args()
-
-    server = None
-    is_sync = args.sync or args.type == 'sim'
-    if args.protocol == 'lx200':
-        server = ServerLX200(args.ip, args.port, args.type, is_sync)
-    elif args.protocol == 'nexstar':
-        server = ServerNexStar(args.ip, args.port, args.type, is_sync)
-
-    try:
-        server.start()
-    except KeyboardInterrupt:
-        log.warning("\nСервер остановлен")
-    except Exception as e:
-        log.error(f"Ошибка при запуске сервера: {e}")
-    finally:
-        server.stop()
+    return parser.parse_args()
 
 
 if __name__ == '__main__':

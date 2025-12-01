@@ -2,7 +2,6 @@ import os
 import random
 import socket
 import threading
-from time import sleep
 
 # Конфигурация
 AP_NAME = f"SynScan_WiFi_{random.randint(1000, 9999)}"  # Случайный ID
