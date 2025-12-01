@@ -172,10 +172,10 @@ class ServerNexStar(Server):
             slew_angle = 1
             if direction == Direction.POSITIVE:  # '$' → positive → вверх (север)
                 self.logger.info(f"Фиксированный сдвиг по ч.с. по вертикали со скоростью {speed}")
-                self.mount.slew_motor_v(slew_angle, speed)
+                self.mount.slew_motor_v(-slew_angle, speed)
             elif direction == Direction.NEGATIVE:  # '%' → negative → вниз (юг)
                 self.logger.info(f"Фиксированный сдвиг п.ч.с по вертикали со скоростью {speed}")
-                self.mount.slew_motor_v(-slew_angle, speed)
+                self.mount.slew_motor_v(slew_angle, speed)
             elif direction == Extra.GET_DEVICE_VERSION:
                 self.logger.info(f"Версия Alt/DEC двигателя: v{DEVICE_VERSION[0]}.{DEVICE_VERSION[1]}")
                 return self.version_to_byte(DEVICE_VERSION[0], DEVICE_VERSION[1])
