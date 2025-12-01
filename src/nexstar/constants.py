@@ -7,6 +7,13 @@ class Device(IntEnum):
     GPS = 176
     RTC = 178  # Real-Time Clock
 
+class Direction(IntEnum):
+    POSITIVE = 36
+    NEGATIVE = 37
+
+class Extra(IntEnum):
+    GET_DEVICE_VERSION = 254
+    IS_GPS_LINKED = 55
 
 class Model(IntEnum):
     GPS_SERIES = 1

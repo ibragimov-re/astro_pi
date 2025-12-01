@@ -4,7 +4,7 @@ import OPi.GPIO as GPIO
 import time
 import threading
 
-from motor.controller.a4988_motor_controller import A4988MotorController
+from motor.controller.step_motor_controller import StepMotorController
 from src.motor.motor_list import MOTORS
 
 # двигатель 1
@@ -32,8 +32,8 @@ def move_motor_sync(motor, angle, speed):
 
 def interactive_mode():
     """Режим интерактивного управления"""
-    motor = A4988MotorController(CURRENT_MOTOR, PIN_STEP_FIRST, PIN_DIR_FIRST, PIN_ENABLE_FIRST)
-    motor2 = A4988MotorController(CURRENT_MOTOR, PIN_STEP_SECOND, PIN_DIR_SECOND, PIN_ENABLE_SECOND)
+    motor = StepMotorController(CURRENT_MOTOR, PIN_STEP_FIRST, PIN_DIR_FIRST, PIN_ENABLE_FIRST)
+    motor2 = StepMotorController(CURRENT_MOTOR, PIN_STEP_SECOND, PIN_DIR_SECOND, PIN_ENABLE_SECOND)
 
     motor.set_microstep(16)
     motor2.set_microstep(16)
@@ -95,8 +95,8 @@ def interactive_mode():
 
 
 def test_modes():
-    motor = A4988MotorController(CURRENT_MOTOR, PIN_STEP_FIRST, PIN_DIR_FIRST, PIN_ENABLE_FIRST)
-    motor2 = A4988MotorController(CURRENT_MOTOR, PIN_STEP_SECOND, PIN_DIR_SECOND, PIN_ENABLE_SECOND)
+    motor = StepMotorController(CURRENT_MOTOR, PIN_STEP_FIRST, PIN_DIR_FIRST, PIN_ENABLE_FIRST)
+    motor2 = StepMotorController(CURRENT_MOTOR, PIN_STEP_SECOND, PIN_DIR_SECOND, PIN_ENABLE_SECOND)
 
     try:
         print("=== ТЕСТ РЕЖИМОВ ===")

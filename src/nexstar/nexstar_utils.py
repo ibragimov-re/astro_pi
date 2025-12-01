@@ -1,9 +1,9 @@
 import datetime
 import os
 
-from src.location import Coordinate, Location
+from src.utils.location import Coordinate, Location
 from src.utils import astropi_utils
-from .commands import Command
+from src.nexstar.commands import Command
 
 
 def to_byte_command(val: int):
