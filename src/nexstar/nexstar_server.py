@@ -298,7 +298,6 @@ class ServerNexStar(Server):
             lst = astropi_utils.calculate_local_sidereal_time(self.mouth.location.long.decimal())
 
             target_motor_ra = lst - ra_target_deg  # [0, 360)
-            # target_motor_ra = astropi_utils.normalize_degrees_unsigned(ra_target_deg)  # [0, 360)
             target_motor_dec = dec_target_deg  # [-90, 90]
 
             # Текущие углы моторов
