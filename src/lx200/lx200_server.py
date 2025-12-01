@@ -4,8 +4,8 @@ from src.server import Server
 class ServerLX200(Server):
     buffer = 8
 
-    def __init__(self, host='0.0.0.0', port=4030, mouth_type='real', sync=False):
-        super().__init__(host, port, Server.name, mouth_type, "LX200", sync)
+    def __init__(self, host='0.0.0.0', port=4030, mount_type='real', sync=False):
+        super().__init__(host, port, Server.name, mount_type, "LX200", sync)
 
     def get_buffer(self):
         return self.buffer

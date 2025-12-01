@@ -2,8 +2,8 @@ import copy
 
 from src.motor.motor import Motor
 from src.motor.pins.motor_pins import MotorPins
-from src.mouth.mouth import Mouth
-from src.mouth.tracking_mode import TrackingMode
+from src.mount.mount import Mount
+from src.mount.tracking_mode import TrackingMode
 from src.utils.app_logger import AppLogger
 from src.utils.location import SkyCoordinate, Location
 from src.utils import astropi_utils
@@ -13,13 +13,13 @@ HIGH_SPEED = 5
 MID_SPEED = 3
 LOW_SPEED = 1
 
-class MouthController:
-    def __init__(self, mouth_params: Mouth, motor_params: Motor, pins_h: MotorPins, pins_v: MotorPins,
+class MountController:
+    def __init__(self, mount_params: Mount, motor_params: Motor, pins_h: MotorPins, pins_v: MotorPins,
                  motor_h_index: str, motor_v_index: str):
-        self.logger = AppLogger.info(mouth_params.name)
+        self.logger = AppLogger.info(mount_params.name)
 
-        self.logger.info(f"Инициализация монтировки: {mouth_params.name}")
-        self.params = mouth_params
+        self.logger.info(f"Инициализация монтировки: {mount_params.name}")
+        self.params = mount_params
         self.motor_params = motor_params
 
         self.pins_v = pins_v
@@ -52,7 +52,7 @@ class MouthController:
     def create_motor_h_controller(self, motor_params, pins, motor_index):
         raise NotImplementedError("Мотор горизонтали не проинициализирован")
 
-    def get_mouth_tracking_type(self) -> TrackingMode:
+    def get_mount_tracking_type(self) -> TrackingMode:
         return self.params.tracking_mode
 
     def goto(self, target: SkyCoordinate, speed=MAX_SPEED):

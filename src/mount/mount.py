@@ -1,8 +1,8 @@
 from nexstar.constants import Model
-from src.mouth.tracking_mode import TrackingMode
+from src.mount.tracking_mode import TrackingMode
 
 
-class Mouth:
+class Mount:
 
     def __init__(self, model: Model, has_gps, tracking_mode: TrackingMode, name="No name mount with GoTo"):
         self.name = name

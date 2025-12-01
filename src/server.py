@@ -3,16 +3,16 @@ import time
 from abc import ABC, abstractmethod
 
 from src.motor.motor_list import MOTORS
-from src.mouth.controller.mouth_real_controller import MouthRealController
-from src.mouth.controller.mouth_sim_controller import MouthSimController
-from src.mouth.mouth_list import MOUTH_LIST
+from src.mount.controller.mount_real_controller import MountRealController
+from src.mount.controller.mount_sim_controller import MountSimController
+from src.mount.mount_list import MOUNT_LIST
 from src.utils import astropi_utils
 from src.utils.app_logger import AppLogger
 from src.utils.location import Location, SkyCoordinate
 
 TEST_LOCATION = Location.fromLatLong(58, 0, 54, 56, 16, 28)
 
-DEFAULT_MOUTH = MOUTH_LIST['AstroPi']
+DEFAULT_MOUNT = MOUNT_LIST['AstroPi']
 CURRENT_MOTOR = MOTORS.get('NEMA17')
 
 POLAR_RA_DEC = SkyCoordinate(38.34401535, 89.26740197)  # Polar Star RA/DEC
@@ -27,7 +27,7 @@ class Server(ABC):
 
     LOG_RAW_COMMANDS = False
 
-    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi', mouth_type='real', protocol='', sync=False):
+    def __init__(self, host='0.0.0.0', port=10001, name='AstroPi', mount_type='real', protocol='', sync=False):
         self.host = host
         self.port = port
         self.name = name
@@ -41,19 +41,19 @@ class Server(ABC):
         self.alignment_completed = True
 
         self.last_update_time = time.time()
-        self.mouth_type = mouth_type
+        self.mount_type = mount_type
         self.protocol = protocol
         self.sync = sync
 
-        if mouth_type == "sim":
-            self.mouth = MouthSimController(DEFAULT_MOUTH, CURRENT_MOTOR)
+        if mount_type == "sim":
+            self.mount = MountSimController(DEFAULT_MOUNT, CURRENT_MOTOR)
         else:
-            self.mouth = MouthRealController(DEFAULT_MOUTH, CURRENT_MOTOR, "MotorX", "MotorY")
+            self.mount = MountRealController(DEFAULT_MOUNT, CURRENT_MOTOR, "MotorX", "MotorY")
 
-        self.tracking_mode = self.mouth.params.tracking_mode
+        self.tracking_mode = self.mount.params.tracking_mode
 
-        self.mouth.set_location(TEST_LOCATION)
-        self.mouth.set_sync(DEFAULT_TARGET)
+        self.mount.set_location(TEST_LOCATION)
+        self.mount.set_sync(DEFAULT_TARGET)
 
     def _setup_server_socket(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -105,7 +105,7 @@ class Server(ABC):
         return self.tracking_mode
 
     def has_gps(self):
-        return self.mouth.params.has_gps
+        return self.mount.params.has_gps
 
     def get_location(self):
         return self.location
@@ -114,13 +114,13 @@ class Server(ABC):
         self.location = loc
 
     def cancel_goto(self):
-        self.mouth.goto_in_progress = False
+        self.mount.goto_in_progress = False
 
     def get_sync(self) -> SkyCoordinate:
-        return self.mouth.sync
+        return self.mount.sync
 
     def get_current(self) -> SkyCoordinate:
-        return self.mouth.current
+        return self.mount.current
 
     def start(self):
         self.running = True

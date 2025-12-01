@@ -19,8 +19,8 @@ NEXSTAR_BUFFER = 18  # in documentation, the longest command is 18 bytes
 
 class ServerNexStar(Server):
 
-    def __init__(self, host='0.0.0.0', port=4030, mouth_type='real', sync=False):
-        super().__init__(host, port, Server.name, mouth_type, "NexStar", sync)
+    def __init__(self, host='0.0.0.0', port=4030, mount_type='real', sync=False):
+        super().__init__(host, port, Server.name, mount_type, "NexStar", sync)
 
         self.buffer = NEXSTAR_BUFFER
         self.major = APP_VERSION[0]
@@ -131,20 +131,20 @@ class ServerNexStar(Server):
         return self.version_to_byte(DEVICE_VERSION[0], DEVICE_VERSION[1])
 
     def get_model(self):
-        self.logger.info(f"Текущая модель: {self.mouth.params.model.name}")
-        return to_byte_command(self.mouth.params.model.value)
+        self.logger.info(f"Текущая модель: {self.mount.params.model.name}")
+        return to_byte_command(self.mount.params.model.value)
 
     def get_tracking_mode(self):
-        self.logger.info(f"Режим отслеживания движения: {self.mouth.params.tracking_mode.name}")
-        return to_byte_command(self.mouth.params.tracking_mode.value)
+        self.logger.info(f"Режим отслеживания движения: {self.mount.params.tracking_mode.name}")
+        return to_byte_command(self.mount.params.tracking_mode.value)
 
     def set_tracking_mode(self, data):
-        self.mouth.params.tracking_mode = data[1:]
-        self.logger.info(f"Режим отслеживания движения установлен: {self.mouth.params.tracking_mode}")
+        self.mount.params.tracking_mode = data[1:]
+        self.logger.info(f"Режим отслеживания движения установлен: {self.mount.params.tracking_mode}")
         return Command.END
 
     def has_gps(self):
-        return self.mouth.params.has_gps
+        return self.mount.params.has_gps
 
     def pass_through(self, data):
         dev_code = data[2]
@@ -156,10 +156,10 @@ class ServerNexStar(Server):
             slew_angle = 5
             if direction == Direction.POSITIVE:  # '$' → positive → вправо (восток)
                 self.logger.info(f"Фиксированный сдвиг по ч.с. по горизонтали со скоростью {speed}")
-                self.mouth.slew_motor_h(slew_angle, speed)
+                self.mount.slew_motor_h(slew_angle, speed)
             elif direction == Direction.NEGATIVE:  # '%' → negative → влево (запад)
                 self.logger.info(f"Фиксированный сдвиг п.ч.с по горизонтали со скоростью {speed}")
-                self.mouth.slew_motor_h(-slew_angle, speed)
+                self.mount.slew_motor_h(-slew_angle, speed)
             elif direction == Extra.GET_DEVICE_VERSION:
                 self.logger.info(f"Версия Azm/RA двигателя: v{DEVICE_VERSION[0]}.{DEVICE_VERSION[1]}")
                 return self.version_to_byte(DEVICE_VERSION[0], DEVICE_VERSION[1])
@@ -172,10 +172,10 @@ class ServerNexStar(Server):
             slew_angle = 1
             if direction == Direction.POSITIVE:  # '$' → positive → вверх (север)
                 self.logger.info(f"Фиксированный сдвиг по ч.с. по вертикали со скоростью {speed}")
-                self.mouth.slew_motor_v(slew_angle, speed)
+                self.mount.slew_motor_v(slew_angle, speed)
             elif direction == Direction.NEGATIVE:  # '%' → negative → вниз (юг)
                 self.logger.info(f"Фиксированный сдвиг п.ч.с по вертикали со скоростью {speed}")
-                self.mouth.slew_motor_v(-slew_angle, speed)
+                self.mount.slew_motor_v(-slew_angle, speed)
             elif direction == Extra.GET_DEVICE_VERSION:
                 self.logger.info(f"Версия Alt/DEC двигателя: v{DEVICE_VERSION[0]}.{DEVICE_VERSION[1]}")
                 return self.version_to_byte(DEVICE_VERSION[0], DEVICE_VERSION[1])
@@ -194,9 +194,9 @@ class ServerNexStar(Server):
     def gps_commands(self, data):
         byte_4 = data[3]
         if byte_4 == Extra.IS_GPS_LINKED:  # Is GPS Linked? (X > 0 if linked, 0 if not linked)
-            return bytes([0]) + Command.END if not self.mouth.params.has_gps else bytes([1]) + Command.END
+            return bytes([0]) + Command.END if not self.mount.params.has_gps else bytes([1]) + Command.END
         elif byte_4 == Extra.GET_DEVICE_VERSION:  # Get Device Version
-            if self.mouth.params.has_gps:
+            if self.mount.params.has_gps:
                 self.logger.info(f"GPS активен, версия: v{GPS_VERSION[0]}.{GPS_VERSION[1]}")
                 return self.version_to_byte(GPS_VERSION[0], GPS_VERSION[1])
             else:
@@ -206,22 +206,22 @@ class ServerNexStar(Server):
             return Command.END
 
     def get_location(self):
-        if self.mouth.location:
-            self.logger.info(f"Текущии GPS координаты: {self.mouth.location}")
+        if self.mount.location:
+            self.logger.info(f"Текущии GPS координаты: {self.mount.location}")
         else:
             self.logger.info(f"Текущии GPS координаты не заданы")
 
         return self.coord_bytes() + Command.END
 
     def set_location(self, data: bytes):
-        self.mouth.location = bytes_to_location(data)
-        self.logger.info(f"GPS координаты заданы: {self.mouth.location}")
+        self.mount.location = bytes_to_location(data)
+        self.logger.info(f"GPS координаты заданы: {self.mount.location}")
 
     def is_goto_in_progress(self):
-        if self.mouth.goto_in_progress:
+        if self.mount.goto_in_progress:
              self.logger.info(f"Монтировка в процессе наведения GOTO (Ra: {self.get_sync().ra_az_h}, Dec: {self.get_sync().dec_alt_v})")
 
-        return bytes([self.mouth.goto_in_progress]) + Command.END
+        return bytes([self.mount.goto_in_progress]) + Command.END
 
     def is_alignment_in_prog(self):
         # if self.alignment_completed:
@@ -232,10 +232,10 @@ class ServerNexStar(Server):
 
     # Собираем байтовую строку кокординат
     def coord_bytes(self):
-        if not self.mouth.location:
+        if not self.mount.location:
             return Command.END
 
-        return location_to_bytes(self.mouth.location)
+        return location_to_bytes(self.mount.location)
 
     def get_ra_dec(self, precise: bool = True):
         """
@@ -245,7 +245,7 @@ class ServerNexStar(Server):
             от оборота это равно 4814/65536 = 0,07346. Чтобы рассчитать градусы, просто умножьте на 360, что даст значение
             26,4441 градуса.
         """
-        lst = astropi_utils.calculate_local_sidereal_time(self.mouth.location.long.decimal())
+        lst = astropi_utils.calculate_local_sidereal_time(self.mount.location.long.decimal())
         ra = astropi_utils.normalize_degrees_signed(lst - self.get_current().get_ra())
         dec = self.get_current().get_dec()
 
@@ -261,7 +261,7 @@ class ServerNexStar(Server):
 
     def sync_ra_dec(self, data, precise: bool = False):
         self.logger.info(f"Старт команды SYNC (точный режим: {precise})")
-        self.mouth.goto_in_progress = True
+        self.mount.goto_in_progress = True
         ra_dec = strip_command_letter(data)
         ra_dec_arr = ra_dec.split(',')
         ra_hex = ra_dec_arr[0]
@@ -270,12 +270,12 @@ class ServerNexStar(Server):
         prec_ra = astropi_utils.hex_to_degrees(ra_hex, precise)
         prec_dec = astropi_utils.hex_to_degrees(dec_hex, precise)
 
-        self.mouth.set_sync(SkyCoordinate(prec_ra, prec_dec))
+        self.mount.set_sync(SkyCoordinate(prec_ra, prec_dec))
 
         self.logger.info(
             f"Синхронизация по координатам: П.В (Ra):{self.get_sync().get_ra():.2f} ({ra_hex}), Скл (Dec): {self.get_sync().get_dec():.2f} ({dec_hex})")
 
-        self.mouth.goto_in_progress = False
+        self.mount.goto_in_progress = False
 
         return Command.END
 
@@ -285,7 +285,7 @@ class ServerNexStar(Server):
     def goto_ra_dec(self, data, precise: bool = False):
         try:
             self.logger.info(f"Старт команды GOTO Ra/Dec (точный режим: {precise})")
-            self.mouth.goto_in_progress = True
+            self.mount.goto_in_progress = True
 
             ra_dec = strip_command_letter(data)
             ra_dec_arr = ra_dec.split(',')
@@ -295,14 +295,14 @@ class ServerNexStar(Server):
             dec_target_deg = astropi_utils.hex_to_degrees(ra_dec_arr[1], precise)
 
             # Преобразование в углы моторов
-            lst = astropi_utils.calculate_local_sidereal_time(self.mouth.location.long.decimal())
+            lst = astropi_utils.calculate_local_sidereal_time(self.mount.location.long.decimal())
 
             target_motor_ra = lst - ra_target_deg  # [0, 360)
             target_motor_dec = dec_target_deg  # [-90, 90]
 
             # Текущие углы моторов
-            current_motor_ra = self.mouth.current.get_ra()
-            current_motor_dec = self.mouth.current.get_dec()
+            current_motor_ra = self.mount.current.get_ra()
+            current_motor_dec = self.mount.current.get_dec()
 
             # Считаем разницу (относительные углы для поворота)
             # Учитываем кратчайший путь для RA (через 0°/360°)
@@ -320,11 +320,11 @@ class ServerNexStar(Server):
             self.logger.info(f"Dec: текущий={current_motor_dec:.2f}, цель={target_motor_dec:.2f}")
             self.logger.info(f"Относительный поворот: RA(h)={delta_ra:.4f}°, Dec(v)={delta_dec:.4f}°")
 
-            self.mouth.goto(SkyCoordinate(delta_ra, delta_dec))
+            self.mount.goto(SkyCoordinate(delta_ra, delta_dec))
 
-            self.mouth.current = SkyCoordinate(target_motor_ra, target_motor_dec)
+            self.mount.current = SkyCoordinate(target_motor_ra, target_motor_dec)
 
-            self.mouth.goto_in_progress = False
+            self.mount.goto_in_progress = False
             return Command.END
         except Exception as e:
             self.logger.error(e)
@@ -335,7 +335,7 @@ class ServerNexStar(Server):
 
     def goto_az_alt(self, data, precise: bool = False):
         self.logger.info(f"Старт команды GOTO Az/Alt (точный режим: {precise})")
-        self.mouth.goto_in_progress = True
+        self.mount.goto_in_progress = True
 
         az_alt = strip_command_letter(data)
         az_alt_arr = az_alt.split(',')
@@ -349,8 +349,8 @@ class ServerNexStar(Server):
         target_motor_alt = alt_target_deg # - 360.0  # Dec — прямой угол [-90, 90]
 
         # Текущие углы моторов
-        current_motor_az = self.mouth.motor_h_angle
-        current_motor_alt = self.mouth.motor_v_angle
+        current_motor_az = self.mount.motor_h_angle
+        current_motor_alt = self.mount.motor_v_angle
 
         delta_az = current_motor_az - (self.get_current().get_az() - target_motor_az)
         delta_alt = current_motor_alt - (self.get_current().get_alt() - target_motor_alt)
@@ -361,9 +361,9 @@ class ServerNexStar(Server):
         self.logger.info(f"Текущие углы моторов: Az(h)={current_motor_az:.4f}°, Alt(v)={current_motor_alt:.4f}°")
         self.logger.info(f"Относительный поворот: Az(h)={delta_az:.4f}°, Alt(v)={delta_alt:.4f}°")
 
-        self.mouth.goto(SkyCoordinate(delta_az, delta_alt))
+        self.mount.goto(SkyCoordinate(delta_az, delta_alt))
 
-        self.mouth.current = SkyCoordinate(target_motor_az, target_motor_alt)
+        self.mount.current = SkyCoordinate(target_motor_az, target_motor_alt)
 
-        self.mouth.goto_in_progress = False
+        self.mount.goto_in_progress = False
         return Command.END

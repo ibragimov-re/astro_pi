@@ -1,13 +1,12 @@
 import sys
 import threading
 
-from src.mouth.tracking_mode import TrackingMode
-from src.motor.pins.a4988_motor_pins import A4988MotorPins
 from src.motor.motor import Motor
-from src.mouth.controller.mouth_controller import MouthController
-from src.mouth.mouth import Mouth
-from src.utils.location import SkyCoordinate, Location
-from utils import astropi_utils
+from src.motor.pins.a4988_motor_pins import A4988MotorPins
+from src.mount.controller.mount_controller import MountController
+from src.mount.mount import Mount
+from src.mount.tracking_mode import TrackingMode
+from src.utils.location import SkyCoordinate
 
 MAX_SPEED = 2
 HIGH_SPEED = 5
@@ -27,22 +26,22 @@ PIN_ENABLE_DEC = "PD18"   # 12 фиолетовый
 PIN_MS_ALL_DEC = "PL3"    # 10 сиреневый
 
 
-class MouthRealController(MouthController):
-    def __init__(self, mouth_params: Mouth, motor_params: Motor, motor_h_index, motor_v_index):
-        super().__init__(mouth_params, motor_params,
+class MountRealController(MountController):
+    def __init__(self, mount_params: Mount, motor_params: Motor, motor_h_index, motor_v_index):
+        super().__init__(mount_params, motor_params,
                          A4988MotorPins(PIN_STEP_RA, PIN_DIR_RA, PIN_ENABLE_RA, [PIN_MS_ALL_RA, PIN_MS_ALL_RA, PIN_MS_ALL_RA]),
                          A4988MotorPins(PIN_STEP_DEC, PIN_DIR_DEC, PIN_ENABLE_DEC, [PIN_MS_ALL_DEC, PIN_MS_ALL_DEC, PIN_MS_ALL_DEC]),
                          motor_h_index, motor_v_index)
 
     def create_motor_v_controller(self, motor_params, pins, motor_index):
-        axis = "Alt" if self.get_mouth_tracking_type() == TrackingMode.ALT_AZ else "Dec"
+        axis = "Alt" if self.get_mount_tracking_type() == TrackingMode.ALT_AZ else "Dec"
         self.logger.info("")
         self.logger.info(f"Инициализация двигателя прямого восхождения ({axis})")
 
         return self.create_motor_controller(axis, motor_params, pins, motor_index)
 
     def create_motor_h_controller(self, motor_params, pins, motor_index):
-        axis = "Az" if self.get_mouth_tracking_type() == TrackingMode.ALT_AZ else "Ra"
+        axis = "Az" if self.get_mount_tracking_type() == TrackingMode.ALT_AZ else "Ra"
         self.logger.info("")
         self.logger.info(f"Инициализация двигателя склонения ({axis})")
 

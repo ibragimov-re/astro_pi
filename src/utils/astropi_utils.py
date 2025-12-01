@@ -5,6 +5,12 @@ import math
 import socket
 import time
 
+from astropy.coordinates import Longitude
+from astropy.time import Time
+from astropy.utils import iers
+iers.conf.auto_download = False
+iers.conf.auto_max_age = None
+
 STANDARD = 0x10000      # 16-bit: 65536
 PRECISE_NS = 0x1000000  # 24-bit: 16777216, this precision in NexStar documentation
 PRECISE = 0x100000000   # 32-bit: 4294967296, now Stellarium uses this precision
@@ -144,7 +150,7 @@ def int_to_hex(value: int, digit: int) -> str:
     """Переводит целое число в шестнадцатеричную строку с заданным количеством разрядов (digit)"""
     return f"{value:0{digit}X}"
 
-def calculate_local_sidereal_time(longitude_deg, obs_time: datetime.datetime=datetime.datetime.now(datetime.UTC)):
+def calculate_local_sidereal_time_old(longitude_deg, obs_time: datetime.datetime=datetime.datetime.now(datetime.UTC)):
     """
     Вычисляет местное звездное время в градусах
 
@@ -163,25 +169,125 @@ def calculate_local_sidereal_time(longitude_deg, obs_time: datetime.datetime=dat
     # 360.98564736629° - скорость вращения Земли в градусах/день
     gmst_deg = (280.46061837 + 360.98564736629 * days_since_j2000) % 360
 
-    gmst_hours = gmst_deg / 15.0
+    gmst_time = deg_to_time(gmst_deg)
 
-    # Преобразование в формат часов, минут, секунд
-    hours = int(gmst_hours)
-    minutes = int((gmst_hours - hours) * 60)
-    seconds = ((gmst_hours - hours) * 60 - minutes) * 60
-
-    print(f'Расчетное GMST: {gmst_deg}°, {hours}:{minutes}:{seconds}')
+    print(f'Расчетное GMST: {gmst_deg}°, {gmst_time.strftime("%H:%M:%S")}')
 
     # Местное звездное время = GMST + долгота
     lst_deg = (gmst_deg + longitude_deg) % 360
 
-    lst_hours = lst_deg / 15.0
-
     # Преобразование в формат часов, минут, секунд
-    hours = int(lst_hours)
-    minutes = int((lst_hours - hours) * 60)
-    seconds = ((lst_hours - hours) * 60 - minutes) * 60
+    lst_time = deg_to_time(lst_deg)
 
-    print(f'Расчетное LST: {lst_deg}°, {hours}:{minutes}:{seconds}')
+    print(f'Расчетное LST: {lst_deg}°, {lst_time.strftime("%H:%M:%S")}')
 
     return lst_deg
+
+def calculate_local_sidereal_time(longitude_deg: float, obs_time: datetime.datetime = None) -> float:
+    if obs_time is None:
+        obs_time = datetime.datetime.now(datetime.timezone.utc)
+    else:
+        obs_time = obs_time.astimezone(datetime.timezone.utc)
+    t = Time(obs_time, scale="utc")
+
+    lst_deg: Longitude = t.sidereal_time('mean', longitude=longitude_deg)
+    # lst_time = lst_deg.to_string(unit='hour')
+    #
+    # print(f'Расчетное LST: {lst_deg.deg}°, {lst_time}')
+    return lst_deg.deg
+
+def calculate_local_sidereal_time2(
+    longitude_deg: float,
+    obs_time: datetime.datetime = None
+) -> float:
+    """
+    Вычисляет местное звёздное время (LST) в градусах.
+    """
+
+    if obs_time is None:
+        obs_time = datetime.datetime.now(datetime.timezone.utc)
+    else:
+        obs_time = obs_time.astimezone(datetime.timezone.utc)
+
+    gmst_deg = gmst_from_datetime(obs_time)
+    lst_deg = (gmst_deg + longitude_deg) % 360
+
+    gmst_time = deg_to_time(gmst_deg)
+    lst_time = deg_to_time(lst_deg)
+
+    print(f'Расчетное GMST: {gmst_deg}°, {gmst_time.strftime("%H:%M:%S")}')
+    print(f'Расчетное LST: {lst_deg}°, {lst_time.strftime("%H:%M:%S")}')
+
+    return lst_deg
+
+
+def gmst_from_datetime(obs_time: datetime.datetime) -> float:
+    """
+    Вычисляет GMST (Гринвичское звёздное время) в градусах
+    по стандарту IAU 2006.
+
+    Все коэффициенты разложены и соответствуют официальным
+    астрономическим алгоритмам.
+    """
+
+    # Юлианская дата и столетия от J2000
+    JD = julian_date(obs_time)
+    T = (JD - 2451545.0) / 36525
+
+    # ------ Разложенные коэффициенты IAU 2006 ------
+    # GMST_0 (звёздное время в 0h UT)
+    GMST0_deg = (
+        100.46061837
+        + 36000.770053608 * T
+        + 0.000387933 * T**2
+        - (T**3) / 38710000
+    )
+
+    # UT в часах
+    UT = (
+        obs_time.hour
+        + obs_time.minute / 60
+        + obs_time.second / 3600
+        + obs_time.microsecond / 3_600_000_000
+    )
+
+    # Ускорение вращения Земли: звёздные сутки ≠ солнечные
+    SIDEREAL_RATE = 1.00273790935  # отношение звёздных суток к солнечным
+
+    GMST_deg = (GMST0_deg + SIDEREAL_RATE * UT * 15) % 360
+
+    return GMST_deg
+
+
+def julian_date(dt: datetime.datetime) -> float:
+    """
+    Вычисляет Юлианскую дату (JD) из datetime в UTC.
+    """
+    year = dt.year
+    month = dt.month
+    day = dt.day + (dt.hour + (dt.minute + dt.second / 60) / 60) / 24
+
+    if month <= 2:
+        year -= 1
+        month += 12
+
+    A = math.floor(year / 100)
+    B = 2 - A + math.floor(A / 4)
+
+    JD = (
+        math.floor(365.25 * (year + 4716))
+        + math.floor(30.6001 * (month + 1))
+        + day
+        + B
+        - 1524.5
+    )
+
+    return JD
+
+def deg_to_time(deg: float) -> datetime.time:
+    """Преобразование в формат часов, минут, секунд"""
+    hours_float = deg / 15.0
+    hours = int(hours_float)
+    minutes = int((hours_float - hours) * 60)
+    seconds = int(((hours_float - hours) * 60 - minutes) * 60)
+    return datetime.time(hours, minutes, seconds, 0, tzinfo=datetime.timezone.utc)
