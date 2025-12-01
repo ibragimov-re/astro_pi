@@ -1,12 +1,9 @@
-import copy
-
 from src.motor.motor import Motor
 from src.motor.pins.motor_pins import MotorPins
 from src.mount.mount import Mount
 from src.mount.tracking_mode import TrackingMode
 from src.utils.app_logger import AppLogger
 from src.utils.location import SkyCoordinate, Location
-from src.utils import astropi_utils
 
 MAX_SPEED = 10
 HIGH_SPEED = 5

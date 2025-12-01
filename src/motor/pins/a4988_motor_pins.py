@@ -1,4 +1,4 @@
-from motor.pins.motor_pins import MotorPins
+from src.motor.pins.motor_pins import MotorPins
 
 
 class A4988MotorPins(MotorPins):

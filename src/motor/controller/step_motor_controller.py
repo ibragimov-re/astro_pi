@@ -4,7 +4,7 @@ import threading
 import time
 
 from src.motor.motor import Motor
-from motor.pins.a4988_motor_pins import A4988MotorPins
+from src.motor.pins.a4988_motor_pins import A4988MotorPins
 from src.utils.app_logger import AppLogger
 
 class StepMotorController:

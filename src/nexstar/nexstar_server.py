@@ -4,8 +4,8 @@ from src.nexstar.commands import Command
 from src.server import Server
 from src.utils import astropi_utils, coordinate_utils
 from src.utils.location import SkyCoordinate
-from .constants import Device, Direction, Extra
-from .nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
+from src.nexstar.constants import Device, Direction, Extra
+from src.nexstar.nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
     location_to_bytes, byte_to_datetime_utc
 
 # manual by commands https://s3.amazonaws.com/celestron-site-support-files/support_files/1154108406_nexstarcommprot.pdf
@@ -135,7 +135,7 @@ class ServerNexStar(Server):
         return to_byte_command(self.mount.params.model.value)
 
     def get_tracking_mode(self):
-        self.logger.info(f"Режим отслеживания движения: {self.mount.params.tracking_mode.name}")
+        # self.logger.info(f"Режим отслеживания движения: {self.mount.params.tracking_mode.name}")
         return to_byte_command(self.mount.params.tracking_mode.value)
 
     def set_tracking_mode(self, data):
