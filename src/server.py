@@ -15,9 +15,10 @@ TEST_LOCATION = Location.fromLatLong(58, 0, 54, 56, 16, 28)
 DEFAULT_MOUTH = MOUTH_LIST['AstroPi']
 CURRENT_MOTOR = MOTORS.get('NEMA17')
 
-POLAR_RA_DEC = SkyCoordinate(38.044259548187256, 89.259)  # Polar Star RA/DEC
+POLAR_RA_DEC = SkyCoordinate(38.34401535, 89.26740197)  # Polar Star RA/DEC
 ZERO = SkyCoordinate(0.0, 0.0)
-DEFAULT_TARGET = POLAR_RA_DEC
+RA_0_DEC_90 = SkyCoordinate(0.0, 90.0)
+DEFAULT_TARGET = RA_0_DEC_90
 
 class Server(ABC):
     buffer = 1024
@@ -45,11 +46,14 @@ class Server(ABC):
         self.sync = sync
 
         if mouth_type == "sim":
-            self.mouth = MouthSimController(DEFAULT_MOUTH, CURRENT_MOTOR, DEFAULT_TARGET)
+            self.mouth = MouthSimController(DEFAULT_MOUTH, CURRENT_MOTOR)
         else:
-            self.mouth = MouthRealController(DEFAULT_MOUTH, CURRENT_MOTOR, DEFAULT_TARGET, "MotorX", "MotorY")
+            self.mouth = MouthRealController(DEFAULT_MOUTH, CURRENT_MOTOR, "MotorX", "MotorY")
 
         self.tracking_mode = self.mouth.params.tracking_mode
+
+        self.mouth.set_location(TEST_LOCATION)
+        self.mouth.set_sync(DEFAULT_TARGET)
 
     def _setup_server_socket(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

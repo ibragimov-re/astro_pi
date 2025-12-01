@@ -5,14 +5,14 @@ from src.motor.motor import Motor
 from src.mouth.controller.mouth_real_controller import MouthRealController
 from src.mouth.mouth import Mouth
 from src.mouth.tracking_mode import TrackingMode
-from src.utils.location import SkyCoordinate
+from src.utils.location import SkyCoordinate, Location
 
 MAX_SPEED = 10
 
 class MouthSimController(MouthRealController):
 
-    def __init__(self, mouth_params: Mouth, motor_params: Motor, target: SkyCoordinate):
-        super().__init__(mouth_params, motor_params, target, '#Nema17HS8401_Horizontal', '#Nema17HS8401_Vertical')
+    def __init__(self, mouth_params: Mouth, motor_params: Motor):
+        super().__init__(mouth_params, motor_params, '#Nema17HS8401_Horizontal', '#Nema17HS8401_Vertical')
 
         mount_type = GPIO.kopis_motorsim.AZ if self.get_mouth_tracking_type() == TrackingMode.ALT_AZ else GPIO.kopis_motorsim.EQ
         GPIO.kopis_motorsim.setup_motors_by_mount_type(mount_type)

@@ -4,10 +4,6 @@ import datetime
 import math
 import socket
 import time
-from astropy.time import Time
-import astropy.units as u
-
-from utils.location import Coordinate
 
 STANDARD = 0x10000      # 16-bit: 65536
 PRECISE_NS = 0x1000000  # 24-bit: 16777216, this precision in NexStar documentation
@@ -148,19 +144,44 @@ def int_to_hex(value: int, digit: int) -> str:
     """Переводит целое число в шестнадцатеричную строку с заданным количеством разрядов (digit)"""
     return f"{value:0{digit}X}"
 
-
-def calculate_lst(utc_time: datetime.datetime, longitude: Coordinate) -> float:
-    utc_deg = (utc_time.hour + utc_time.minute / 60 + utc_time.second / 60)
-    long_deg_time = longitude.deg / 15 + longitude.min / 60 + longitude.sec / 60
-    lst = utc_deg + long_deg_time
-    return lst
-
-def calculate_lst_astropy(utc_time: datetime.datetime, longitude_deg: float):
+def calculate_local_sidereal_time(longitude_deg, obs_time: datetime.datetime=datetime.datetime.now(datetime.UTC)):
     """
-        utc_time: datetime.datetime с tz=timezone.utc
-        longitude_deg: восточная долгота в градусах (положительная)
-        Возвращает LST в градусах.
-        """
-    t = Time(utc_time, scale='utc')
-    lst = t.sidereal_time('apparent', longitude=longitude_deg * u.deg_C)
-    return lst.deg
+    Вычисляет местное звездное время в градусах
+
+    Args:
+        obs_time: время наблюдения
+        longitude_deg: долгота наблюдателя в градусах
+    """
+    # JD2000 = 2451545.0
+    j2000 = datetime.datetime(2000, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)  # J2000 эпоха
+
+    # Разница в днях от J2000
+    days_since_j2000 = (obs_time - j2000).total_seconds()  / 60 / 60 / 24
+
+    # Звездное время в Гринвиче (в градусах)
+    # 280.46061837° - начальное смещение
+    # 360.98564736629° - скорость вращения Земли в градусах/день
+    gmst_deg = (280.46061837 + 360.98564736629 * days_since_j2000) % 360
+
+    gmst_hours = gmst_deg / 15.0
+
+    # Преобразование в формат часов, минут, секунд
+    hours = int(gmst_hours)
+    minutes = int((gmst_hours - hours) * 60)
+    seconds = ((gmst_hours - hours) * 60 - minutes) * 60
+
+    print(f'Расчетное GMST: {gmst_deg}°, {hours}:{minutes}:{seconds}')
+
+    # Местное звездное время = GMST + долгота
+    lst_deg = (gmst_deg + longitude_deg) % 360
+
+    lst_hours = lst_deg / 15.0
+
+    # Преобразование в формат часов, минут, секунд
+    hours = int(lst_hours)
+    minutes = int((lst_hours - hours) * 60)
+    seconds = ((lst_hours - hours) * 60 - minutes) * 60
+
+    print(f'Расчетное LST: {lst_deg}°, {hours}:{minutes}:{seconds}')
+
+    return lst_deg

@@ -5,7 +5,8 @@ from src.motor.pins.motor_pins import MotorPins
 from src.mouth.mouth import Mouth
 from src.mouth.tracking_mode import TrackingMode
 from src.utils.app_logger import AppLogger
-from src.utils.location import SkyCoordinate
+from src.utils.location import SkyCoordinate, Location
+from src.utils import astropi_utils
 
 MAX_SPEED = 10
 HIGH_SPEED = 5
@@ -13,7 +14,7 @@ MID_SPEED = 3
 LOW_SPEED = 1
 
 class MouthController:
-    def __init__(self, mouth_params: Mouth, motor_params: Motor, target: SkyCoordinate, pins_h: MotorPins, pins_v: MotorPins,
+    def __init__(self, mouth_params: Mouth, motor_params: Motor, pins_h: MotorPins, pins_v: MotorPins,
                  motor_h_index: str, motor_v_index: str):
         self.logger = AppLogger.info(mouth_params.name)
 
@@ -27,8 +28,10 @@ class MouthController:
         self.motor_v = self.create_motor_v_controller(motor_params, self.pins_v, motor_v_index)
         self.motor_h = self.create_motor_h_controller(motor_params, self.pins_h, motor_h_index)
 
-        self.sync = copy.copy(target)
-        self.current = target
+        self.location = Location.zero_north_east()
+
+        self.sync = SkyCoordinate.zero()
+        self.current = SkyCoordinate.zero()
 
         # # Ra, Az
         # self.last_h = self.curr_h = target.ra_az if len(target) >= 1 else 0.0
@@ -37,8 +40,11 @@ class MouthController:
 
         self.goto_in_progress = False
 
-    def set_sync(self, target):
-        self.sync = target
+    def set_sync(self, target: SkyCoordinate):
+        self.current = SkyCoordinate(target.get_horizontal(), target.get_vertical())
+
+    def set_location(self, location: Location):
+        self.location = location
 
     def create_motor_v_controller(self, motor_params, pins, motor_index):
         raise NotImplementedError("Мотор вертикали не проинициализирован")

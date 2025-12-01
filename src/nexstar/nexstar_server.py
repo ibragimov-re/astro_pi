@@ -1,11 +1,9 @@
 import datetime
-from os.path import altsep
 
 from src.nexstar.commands import Command
 from src.server import Server
-from src.utils import astropi_utils
-from utils import coordinate_utils
-from utils.location import SkyCoordinate
+from src.utils import astropi_utils, coordinate_utils
+from src.utils.location import SkyCoordinate
 from .constants import Device, Direction, Extra
 from .nexstar_utils import strip_command_letter, to_byte_command, get_time, bytes_to_location, \
     location_to_bytes, byte_to_datetime_utc
@@ -208,16 +206,16 @@ class ServerNexStar(Server):
             return Command.END
 
     def get_location(self):
-        if self.location:
-            self.logger.info(f"Текущии GPS координаты: {self.location}")
+        if self.mouth.location:
+            self.logger.info(f"Текущии GPS координаты: {self.mouth.location}")
         else:
             self.logger.info(f"Текущии GPS координаты не заданы")
 
         return self.coord_bytes() + Command.END
 
     def set_location(self, data: bytes):
-        self.location = bytes_to_location(data)
-        self.logger.info(f"GPS координаты заданы: {self.location}")
+        self.mouth.location = bytes_to_location(data)
+        self.logger.info(f"GPS координаты заданы: {self.mouth.location}")
 
     def is_goto_in_progress(self):
         if self.mouth.goto_in_progress:
@@ -234,11 +232,10 @@ class ServerNexStar(Server):
 
     # Собираем байтовую строку кокординат
     def coord_bytes(self):
-        if not self.location:
+        if not self.mouth.location:
             return Command.END
 
-        # return location_to_bytes(self.location) + Command.END
-        return location_to_bytes(self.location)
+        return location_to_bytes(self.mouth.location)
 
     def get_ra_dec(self, precise: bool = True):
         """
@@ -248,7 +245,8 @@ class ServerNexStar(Server):
             от оборота это равно 4814/65536 = 0,07346. Чтобы рассчитать градусы, просто умножьте на 360, что даст значение
             26,4441 градуса.
         """
-        ra = self.get_current().get_ra()
+        lst = astropi_utils.calculate_local_sidereal_time(self.mouth.location.long.decimal())
+        ra = astropi_utils.normalize_degrees_signed(lst - self.get_current().get_ra())
         dec = self.get_current().get_dec()
 
         ra_hex = astropi_utils.degrees_to_hex(ra, precise)
@@ -285,45 +283,53 @@ class ServerNexStar(Server):
         return self.goto_ra_dec(data, True)
 
     def goto_ra_dec(self, data, precise: bool = False):
-        self.logger.info(f"Старт команды GOTO Ra/Dec (точный режим: {precise})")
-        self.mouth.goto_in_progress = True
+        try:
+            self.logger.info(f"Старт команды GOTO Ra/Dec (точный режим: {precise})")
+            self.mouth.goto_in_progress = True
 
-        ra_dec = strip_command_letter(data)
-        ra_dec_arr = ra_dec.split(',')
+            ra_dec = strip_command_letter(data)
+            ra_dec_arr = ra_dec.split(',')
 
-        # Координаты в J2000 для лога
-        ra_target_deg = astropi_utils.hex_to_degrees(ra_dec_arr[0], precise)
-        dec_target_deg = astropi_utils.hex_to_degrees(ra_dec_arr[1], precise)
+            # Координаты в J2000 для лога
+            ra_target_deg = astropi_utils.hex_to_degrees(ra_dec_arr[0], precise)
+            dec_target_deg = astropi_utils.hex_to_degrees(ra_dec_arr[1], precise)
 
-        # Преобразование в углы моторов
-        target_motor_ra = ra_target_deg  # [0, 360)
-        target_motor_dec = dec_target_deg  # [-90, 90]
+            # Преобразование в углы моторов
+            lst = astropi_utils.calculate_local_sidereal_time(self.mouth.location.long.decimal())
 
-        # Текущие углы моторов
-        current_motor_ra = self.mouth.current.get_ra()
-        current_motor_dec = self.mouth.current.get_dec()
+            target_motor_ra = lst - ra_target_deg  # [0, 360)
+            # target_motor_ra = astropi_utils.normalize_degrees_unsigned(ra_target_deg)  # [0, 360)
+            target_motor_dec = dec_target_deg  # [-90, 90]
 
-        # Считаем разницу (относительные углы для поворота)
-        # Учитываем кратчайший путь для RA (через 0°/360°)
-        delta_ra = astropi_utils.normalize_degrees_signed(current_motor_ra - target_motor_ra)
-        delta_dec = astropi_utils.normalize_degrees_signed(target_motor_dec - current_motor_dec)
+            # Текущие углы моторов
+            current_motor_ra = self.mouth.current.get_ra()
+            current_motor_dec = self.mouth.current.get_dec()
 
-        self.logger.info(f"Текущая цель (RA/Dec): {self.get_current().get_ra():.4f}° / {self.get_current().get_dec():.4f}°")
-        self.logger.info(f"Текущая цель (J2000 RA/Dec): {coordinate_utils.toJ2000(self.get_current().get_ra(), self.get_current().get_dec())}")
-        self.logger.info(f"Цель (RA/Dec): {ra_target_deg:.4f}° / {dec_target_deg:.4f}°")
-        self.logger.info(f"Цель (J2000 RA/Dec): {coordinate_utils.toJ2000(ra_target_deg, dec_target_deg)}")
-        self.logger.info(f"Целевые углы моторов: RA(h)={target_motor_ra:.4f}°, Dec(v)={target_motor_dec:.4f}°")
-        self.logger.info(f"Текущие углы моторов: RA(h)={current_motor_ra:.4f}°, Dec(v)={current_motor_dec:.4f}°")
-        self.logger.info(f"RA: текущий={current_motor_ra:.2f}, цель={target_motor_ra:.2f}")
-        self.logger.info(f"Dec: текущий={current_motor_dec:.2f}, цель={target_motor_dec:.2f}")
-        self.logger.info(f"Относительный поворот: RA(h)={delta_ra:.4f}°, Dec(v)={delta_dec:.4f}°")
+            # Считаем разницу (относительные углы для поворота)
+            # Учитываем кратчайший путь для RA (через 0°/360°)
+            delta_ra = astropi_utils.normalize_degrees_signed(target_motor_ra - current_motor_ra)
+            delta_dec = astropi_utils.normalize_degrees_signed(current_motor_dec - target_motor_dec)
 
-        self.mouth.goto(SkyCoordinate(delta_ra, delta_dec))
+            self.logger.info(f"LST = {lst}")
+            self.logger.info(f"Текущая цель (RA/Dec): {self.get_current().get_ra():.4f}° / {self.get_current().get_dec():.4f}°")
+            self.logger.info(f"Текущая цель (J2000 RA/Dec): {coordinate_utils.toJ2000(self.get_current().get_ra(), self.get_current().get_dec())}")
+            self.logger.info(f"Цель (RA/Dec): {ra_target_deg:.4f}° / {dec_target_deg:.4f}°")
+            self.logger.info(f"Цель (J2000 RA/Dec): {coordinate_utils.toJ2000(ra_target_deg, dec_target_deg)}")
+            self.logger.info(f"Целевые углы моторов: RA(h)={target_motor_ra:.4f}°, Dec(v)={target_motor_dec:.4f}°")
+            self.logger.info(f"Текущие углы моторов: RA(h)={current_motor_ra:.4f}°, Dec(v)={current_motor_dec:.4f}°")
+            self.logger.info(f"RA: текущий={current_motor_ra:.2f}, цель={target_motor_ra:.2f}")
+            self.logger.info(f"Dec: текущий={current_motor_dec:.2f}, цель={target_motor_dec:.2f}")
+            self.logger.info(f"Относительный поворот: RA(h)={delta_ra:.4f}°, Dec(v)={delta_dec:.4f}°")
 
-        self.mouth.current = SkyCoordinate(target_motor_ra, target_motor_dec)
+            self.mouth.goto(SkyCoordinate(delta_ra, delta_dec))
 
-        self.mouth.goto_in_progress = False
-        return Command.END
+            self.mouth.current = SkyCoordinate(target_motor_ra, target_motor_dec)
+
+            self.mouth.goto_in_progress = False
+            return Command.END
+        except Exception as e:
+            self.logger.error(e)
+            return bytes([0]) + Command.END
 
     def goto_az_alt_prec(self, data):
         return self.goto_ra_dec(data, True)

@@ -6,7 +6,8 @@ from src.motor.pins.a4988_motor_pins import A4988MotorPins
 from src.motor.motor import Motor
 from src.mouth.controller.mouth_controller import MouthController
 from src.mouth.mouth import Mouth
-from utils.location import SkyCoordinate
+from src.utils.location import SkyCoordinate, Location
+from utils import astropi_utils
 
 MAX_SPEED = 2
 HIGH_SPEED = 5
@@ -27,8 +28,8 @@ PIN_MS_ALL_DEC = "PL3"    # 10 сиреневый
 
 
 class MouthRealController(MouthController):
-    def __init__(self, mouth_params: Mouth, motor_params: Motor, target: SkyCoordinate, motor_h_index, motor_v_index):
-        super().__init__(mouth_params, motor_params, target,
+    def __init__(self, mouth_params: Mouth, motor_params: Motor, motor_h_index, motor_v_index):
+        super().__init__(mouth_params, motor_params,
                          A4988MotorPins(PIN_STEP_RA, PIN_DIR_RA, PIN_ENABLE_RA, [PIN_MS_ALL_RA, PIN_MS_ALL_RA, PIN_MS_ALL_RA]),
                          A4988MotorPins(PIN_STEP_DEC, PIN_DIR_DEC, PIN_ENABLE_DEC, [PIN_MS_ALL_DEC, PIN_MS_ALL_DEC, PIN_MS_ALL_DEC]),
                          motor_h_index, motor_v_index)
